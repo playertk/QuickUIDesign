@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="256"
+   height="128"
+   viewBox="105 55 256 128"
+   version="1.1"
+   id="svg5"
+   sodipodi:docname="BearQuickUI-A.svg"
+   inkscape:version="1.1.2 (b8e25be833, 2022-02-05)"
+   inkscape:export-filename="T:\Works\3D\BlenderProjects\Myweb\logo\像素熊UI设计\BearQuickUI-768.png"
+   inkscape:export-xdpi="288.00003"
+   inkscape:export-ydpi="288.00003"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#878787"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="true"
+     inkscape:document-units="mm"
+     showgrid="true"
+     inkscape:snap-grids="true"
+     inkscape:snap-page="false"
+     showguides="true"
+     inkscape:guide-bbox="true"
+     inkscape:snap-to-guides="false"
+     inkscape:snap-bbox="true"
+     inkscape:snap-global="true"
+     inkscape:zoom="2.8284271"
+     inkscape:cx="128.87021"
+     inkscape:cy="97.227182"
+     inkscape:window-width="1920"
+     inkscape:window-height="1027"
+     inkscape:window-x="-8"
+     inkscape:window-y="22"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg5"
+     inkscape:snap-text-baseline="false"
+     height="100px">
+    <inkscape:grid
+       type="xygrid"
+       id="grid562" />
+  </sodipodi:namedview>
+  <defs
+     id="defs2">
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient31241">
+      <stop
+         style="stop-color:#000000;stop-opacity:1;"
+         offset="0"
+         id="stop31237" />
+      <stop
+         style="stop-color:#000000;stop-opacity:0;"
+         offset="1"
+         id="stop31239" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient31241"
+       id="linearGradient31243"
+       x1="250.77998"
+       y1="93.340034"
+       x2="411.21964"
+       y2="93.340034"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
+  <g
+     id="layer1"
+     inkscape:label="QuickUI"
+     style="display:inline"
+     transform="matrix(0.94779292,0,0,0.94779292,-1.383162,16.944373)">
+    <g
+       inkscape:groupmode="layer"
+       id="layer7"
+       inkscape:label="Text"
+       style="display:inline">
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:28.5416px;line-height:1.25;font-family:'Microsoft YaHei UI';-inkscape-font-specification:'Microsoft YaHei UI, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#fd791b;fill-opacity:1;stroke-width:0.382253"
+         x="242.01735"
+         y="100.87334"
+         id="text31023"
+         inkscape:export-filename="T:\Desktop\像素熊UI设计\rect27405.png"
+         inkscape:export-xdpi="300"
+         inkscape:export-ydpi="300"><tspan
+           sodipodi:role="line"
+           id="tspan889"
+           x="242.01735"
+           y="100.87334"
+           style="stroke-width:0.382253">PixelBear</tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:28.5416px;line-height:1.25;font-family:'Microsoft YaHei UI';-inkscape-font-specification:'Microsoft YaHei UI, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;display:inline;fill:#ffffff;fill-opacity:1;stroke-width:0.382253"
+         x="243.36917"
+         y="132.63054"
+         id="text31023-4"
+         inkscape:export-filename="T:\Desktop\像素熊UI设计\rect27405.png"
+         inkscape:export-xdpi="300"
+         inkscape:export-ydpi="300"><tspan
+           sodipodi:role="line"
+           id="tspan1018"
+           x="243.36917"
+           y="132.63054">QuickUI</tspan></text>
+    </g>
+    <rect
+       style="display:inline;fill:#fd791b;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1.4778;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect22674"
+       width="84.419739"
+       height="82.614273"
+       x="137.35355"
+       y="67.235023"
+       ry="7.75"
+       inkscape:export-filename="T:\Desktop\像素熊UI设计\rect27405.png"
+       inkscape:export-xdpi="300"
+       inkscape:export-ydpi="300" />
+    <path
+       id="rect1861"
+       style="display:inline;fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke-width:3.3"
+       d="m 128.96647,90.690196 v 16.500014 h 16.5 V 90.690196 Z m 8.15335,4.61486 a 3.6175937,3.6175937 0 0 1 3.62223,3.61584 3.6175937,3.6175937 0 0 1 -3.62223,3.615804 3.6175937,3.6175937 0 0 1 -3.61585,-3.615804 3.6175937,3.6175937 0 0 1 3.61585,-3.61584 z"
+       inkscape:export-filename="T:\Desktop\像素熊UI设计\rect27405.png"
+       inkscape:export-xdpi="300"
+       inkscape:export-ydpi="300" />
+    <circle
+       id="path9011"
+       style="display:inline;fill:#f9741b;stroke:#000000"
+       cx="129.58578"
+       cy="119.5993"
+       r="0.031464338"
+       inkscape:export-filename="T:\Desktop\像素熊UI设计\rect27405.png"
+       inkscape:export-xdpi="300"
+       inkscape:export-ydpi="300" />
+    <g
+       id="g14629"
+       transform="matrix(1.0963898,0.76488145,-0.78580034,1.1263753,118.12331,-147.97465)"
+       style="display:inline"
+       inkscape:label="Pencil"
+       inkscape:export-filename="T:\Desktop\像素熊UI设计\rect27405.png"
+       inkscape:export-xdpi="300"
+       inkscape:export-ydpi="300">
+      <path
+         id="rect3312"
+         style="fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke-width:1.06141"
+         d="m 17.6875,105.78125 h 22.705078 c 0,0 1.15625,-0.92423 1.15625,-1.15625 v -3.15625 l -1.15625,-1.15625 H 17.6875 Z"
+         transform="translate(105,55)"
+         sodipodi:nodetypes="ccscccc" />
+      <path
+         id="path10631"
+         style="fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke-width:1.06141"
+         d="m 15.46875,100.3125 h -2.125 v 5.46875 h 2.125 z"
+         transform="translate(105,55)" />
+      <path
+         id="path10629"
+         style="fill:#f9741b;fill-opacity:1;fill-rule:nonzero;stroke-width:1.06141"
+         d="m 15.46875,100.3125 v 5.46875 h 2.21875 v -5.46875 z"
+         transform="translate(105,55)" />
+      <path
+         id="path9334"
+         style="fill:#f9741b;fill-opacity:1;fill-rule:nonzero;stroke-width:1.06141"
+         d="m 13.34375,105.78125 v -5.46875 h -1.138672 c -0.640562,0 -1.15625,0.51569 -1.15625,1.15625 v 3.15625 c 0,0.64056 0.515688,1.15625 1.15625,1.15625 z"
+         transform="translate(105,55)" />
+      <rect
+         style="fill:#f9741b;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:0.971096;stroke-opacity:1"
+         id="rect8829"
+         width="24.484375"
+         height="1.3017009"
+         x="122.05871"
+         y="157.45807" />
+      <path
+         style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1.36439px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="m 145.39258,155.3125 5.72308,2.80362 -5.71929,2.69312 z"
+         id="path9151"
+         sodipodi:nodetypes="cccc" />
+      <path
+         id="path9151-0"
+         style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:1.36439px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="m 149.14105,157.14932 a 1.8969101,1.8969101 0 0 0 -0.24609,0.92578 1.8969101,1.8969101 0 0 0 0.26562,0.96094 l 1.95508,-0.91992 z" />
+    </g>
+    <g
+       id="g14629-8"
+       transform="matrix(-1.0980979,0.94451195,-0.97034367,-1.1281301,524.47942,180.15901)"
+       inkscape:label="Pencil2"
+       inkscape:export-filename="T:\Desktop\像素熊UI设计\rect27405.png"
+       inkscape:export-xdpi="300"
+       inkscape:export-ydpi="300">
+      <path
+         id="rect3312-1"
+         style="fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke-width:1.06141"
+         d="m 17.6875,105.78125 h 22.705078 c 0,0 1.15625,-0.92423 1.15625,-1.15625 v -3.15625 l -1.15625,-1.15625 H 17.6875 Z"
+         sodipodi:nodetypes="ccscccc"
+         transform="translate(105,55)" />
+      <path
+         style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1.36439px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="m 145.39258,155.3125 5.72308,2.80362 -5.71929,2.69312 z"
+         id="path9151-7"
+         sodipodi:nodetypes="cccc" />
+      <path
+         id="path9151-0-4"
+         style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:1.36439px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="m 149.14105,157.14932 a 1.8969101,1.8969101 0 0 0 -0.24609,0.92578 1.8969101,1.8969101 0 0 0 0.26562,0.96094 l 1.95508,-0.91992 z" />
+    </g>
+    <path
+       style="display:inline;fill:none;stroke:#fefefd;stroke-width:2.21079;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 186.23696,143.30335 12.29412,-0.12937 -5.95295,11 z"
+       id="path14845"
+       inkscape:export-filename="T:\Desktop\像素熊UI设计\rect27405.png"
+       inkscape:export-xdpi="300"
+       inkscape:export-ydpi="300" />
+    <rect
+       style="display:inline;fill:none;fill-opacity:1;fill-rule:nonzero;stroke:#fefefd;stroke-width:2.36662;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect19129"
+       width="14.122016"
+       height="9.2860012"
+       x="69.418327"
+       y="149.96771"
+       ry="2.8427432"
+       rx="1.6964759"
+       transform="rotate(-40.298453)"
+       inkscape:export-filename="T:\Desktop\像素熊UI设计\rect27405.png"
+       inkscape:export-xdpi="300"
+       inkscape:export-ydpi="300" />
+    <path
+       id="rect21024"
+       style="display:inline;fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1.84256;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 235.53623,93.070486 -1.81831,-2.08696 -3.34649,2.91814 -0.88886,-1.01933 3.34649,-2.91814 -1.8417,-2.11336 -3.34649,2.91815 -0.88886,-1.01934 3.3465,-2.91813 -1.84129,-2.1107 -3.34649,2.91815 -0.88885,-1.01933 3.3465,-2.91815 -1.84172,-2.11336 -3.34649,2.91814 -0.88886,-1.01934 3.34649,-2.91813 -1.84127,-2.11069 -3.34649,2.91814 -0.88929,-1.022 3.34691,-2.91547 -1.84171,-2.11336 -3.34648,2.91815 -0.88886,-1.01934 3.34649,-2.918135 -1.82098,-2.08654 -3.34649,2.918135 -0.88929,-1.021995 3.34692,-2.91547 -1.862,-2.137501 -3.34649,2.918141 -0.89155,-1.01891 3.3465,-2.918146 -1.8417,-2.113348 -3.34648,2.918143 -0.88887,-1.01933 3.34649,-2.918157 -1.81831,-2.086952 -9.60919,8.37884 26.37139,30.246339 z"
+       inkscape:export-filename="T:\Desktop\像素熊UI设计\rect27405.png"
+       inkscape:export-xdpi="300"
+       inkscape:export-ydpi="300" />
+    <path
+       id="path2047-9"
+       style="display:inline;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.312172"
+       d="m 156.14902,82.007646 a 4.6825582,4.6825582 0 0 0 -4.68255,4.68255 4.6825582,4.6825582 0 0 0 4.68255,4.68256 4.6825582,4.6825582 0 0 0 4.68257,-4.68256 4.6825582,4.6825582 0 0 0 -4.68257,-4.68255 z m 46.51343,0 a 4.6825582,4.6825582 0 0 0 -4.68256,4.68255 4.6825582,4.6825582 0 0 0 4.68256,4.68256 4.6825582,4.6825582 0 0 0 4.68256,-4.68256 4.6825582,4.6825582 0 0 0 -4.68256,-4.68255 z m -23.10062,6.37632 c -6.76011,0 -12.35391,5.46902 -12.35391,12.197234 0,5.65708 3.95485,10.42345 9.2322,11.79784 v 7.08906 c 0,5.25842 -4.1929,9.52121 -9.36511,9.52121 -5.17221,0 -9.36512,-4.26279 -9.36512,-9.52121 a 3.1219022,3.1219022 0 0 0 -3.08207,-3.12169 3.1219022,3.1219022 0 0 0 -3.16074,3.04243 3.1219022,3.1219022 0 0 0 6.1e-4,0.0793 h -0.001 c 0,8.62047 6.98817,15.60854 15.60851,15.60854 5.10633,0 9.63917,-2.45255 12.48683,-6.24341 2.84767,3.79086 7.38049,6.24341 12.48683,6.24341 8.62035,0 15.60851,-6.98807 15.60851,-15.60854 l 0.003,-0.15842 a 3.1219022,3.1219022 0 0 0 -3.082,-3.12175 3.1219022,3.1219022 0 0 0 -3.16011,3.04247 3.1219022,3.1219022 0 0 0 0.003,0.23777 h -0.009 c 0,5.25842 -4.19289,9.52122 -9.3651,9.52122 -5.17222,0 -9.36513,-4.2628 -9.36513,-9.52122 v -7.08906 c 5.27735,-1.37439 9.23222,-6.14075 9.23222,-11.79784 0,-6.728214 -5.59379,-12.197244 -12.35393,-12.197244 z m 0,5.97758 c 3.58428,0 6.37633,2.77583 6.37633,6.219654 0,3.4438 -2.79205,6.22207 -6.37633,6.22207 -3.5843,0 -6.37633,-2.77827 -6.37633,-6.22207 0,-3.443824 2.79203,-6.219654 6.37633,-6.219654 z"
+       inkscape:label="Smeail"
+       inkscape:export-filename="T:\Desktop\像素熊UI设计\rect27405.png"
+       inkscape:export-xdpi="300"
+       inkscape:export-ydpi="300" />
+  </g>
+</svg>

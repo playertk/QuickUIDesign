@@ -1,0 +1,6 @@
+/dist/*
+/node_modules
+/src/assets/img/*.txt
+docs/node_modules/*
+docs/dist/*
+.deepseek/

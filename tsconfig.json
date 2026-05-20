@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist/",
+    "noImplicitAny": true,
+    "module": "esnext",
+    "target": "es2015",
+    "lib": ["dom", "es2015"],
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "moduleResolution": "Node",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "lenis/react": ["node_modules/lenis/dist/lenis-react"]
+    }
+  },
+  "include": ["src/**/*"]
+}

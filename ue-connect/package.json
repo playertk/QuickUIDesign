@@ -1,0 +1,22 @@
+{
+  "name": "ue-connect",
+  "version": "1.0.0",
+  "description": "UE4 connector module",
+  "license": "BSL",
+  "main": "ue-connect.es.js",
+  "types": "index.d.ts",
+  "module": "ue-connect.es.js",
+  "exports": {
+    ".": {
+      "import": "./ue-connect.es.js",
+      "types": "./index.d.ts"
+    }
+  },
+  "files": [
+    "*.js",
+    "*.d.ts",
+    "hooks/",
+    "contexts/",
+    "lib/"
+  ]
+}
