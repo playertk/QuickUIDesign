@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useQuickUIEventListener } from 'ue-connect'
 import autofit from 'autofit.js'
 import '@/styles/index.css'
-import data from '@/assets/img/lufei-base64.txt'
+import base64Img from '@/assets/img/lufei-base64.txt'
 import { UEProvider } from 'ue-connect'
 import UEConnectDemo from '@/components/UEConnect-Demo'
 
@@ -38,14 +38,21 @@ export default function App({ Fit = false }: { Fit?: boolean }) {
             </p>
           </div>
         </div>
-        <div className="absolute top-10 flex flex-col items-center justify-center   space-y-2 text-center text-white ">
-          <p data-nohit className="">
-            Base64 Image Loading
-          </p>
-          <img data-nohit src={data} alt="lufei" className=" w-40 h-40" />
+        <div className="absolute top-8 flex flex-row items-start justify-center space-x-12 text-white">
+          <div className="flex flex-col items-center space-y-2">
+            <p data-nohit className="text-sm">
+              Mode 1: Base64 Inline
+            </p>
+            <img data-nohit src={base64Img} alt="lufei (base64)" className="w-36 h-36" />
+          </div>
+          <div className="flex flex-col items-center space-y-2">
+            <p data-nohit className="text-sm">
+              Mode 2: Static Asset (relative path)
+            </p>
+            <img data-nohit src="./img/lufei.png" alt="lufei (static)" className="w-36 h-36" />
+          </div>
         </div>
         <UEConnectDemo />
-        {/* <Logo /> */}
       </div>
     </UEProvider>
   )

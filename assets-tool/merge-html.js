@@ -280,7 +280,7 @@ async function main() {
 
   // 同时复制静态资源目录（如 audios）到 merged 目录
   const distDir = path.resolve(__dirname, '../dist')
-  for (const dir of ['audios']) {
+  for (const dir of ['audios', 'img']) {
     const srcDir = path.join(distDir, dir)
     const destDir = path.join(targetDir, dir)
     const copied = await copyDirectory(srcDir, destDir)
