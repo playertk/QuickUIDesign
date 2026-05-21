@@ -26,8 +26,10 @@
 ### 1. Clone the Project
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/playertk/QuickUIDesign.git
+
 cd QuickUIDesign
+
 ```
 
 ### 2. Install Dependencies
