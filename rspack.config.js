@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
-const CopyPlugin = require('copy-webpack-plugin')
 const rspack = require('@rspack/core')
 module.exports = {
   devtool: false,
@@ -31,16 +30,17 @@ module.exports = {
       filename: 'index.html',
       template: path.join(__dirname, 'public', 'index.html'),
       inject: 'body',
-      chunks: ['index']
+      chunks: ['index'],
+      minify: false
     }),
 
-    new CopyPlugin({
+    new rspack.CopyRspackPlugin({
       patterns: [
         {
           from: path.resolve(__dirname, 'public'),
           to: path.resolve(__dirname, 'dist'),
-          filter: (source) => {
-            return !source.includes('index.html')
+          globOptions: {
+            ignore: ['**/index.html']
           }
         }
       ]
@@ -49,9 +49,16 @@ module.exports = {
 
   devServer: {
     open: true,
-    static: {
-      directory: path.join(__dirname, 'dist')
-    },
+    static: [
+      {
+        directory: path.join(__dirname, 'dist')
+      },
+      {
+        directory: path.join(__dirname, 'public'),
+        publicPath: '/',
+        serveIndex: true
+      }
+    ],
     hot: true,
     historyApiFallback: true,
     port: 3000

@@ -246,6 +246,24 @@ class HTMLMerger {
   }
 }
 
+async function copyDirectory(src, dest) {
+  if (!fs.existsSync(src)) return false
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(dest, { recursive: true })
+  }
+  const entries = await fs.promises.readdir(src, { withFileTypes: true })
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name)
+    const destPath = path.join(dest, entry.name)
+    if (entry.isDirectory()) {
+      await copyDirectory(srcPath, destPath)
+    } else {
+      await fs.promises.copyFile(srcPath, destPath)
+    }
+  }
+  return true
+}
+
 // 使用示例
 async function main() {
   const merger = new HTMLMerger()
@@ -259,6 +277,17 @@ async function main() {
   }
 
   const success = await merger.createAndMinifyHTMLMenu(sourceHTML, targetDir)
+
+  // 同时复制静态资源目录（如 audios）到 merged 目录
+  const distDir = path.resolve(__dirname, '../dist')
+  for (const dir of ['audios']) {
+    const srcDir = path.join(distDir, dir)
+    const destDir = path.join(targetDir, dir)
+    const copied = await copyDirectory(srcDir, destDir)
+    if (copied) {
+      console.log(`✅ 复制目录: ${dir}`)
+    }
+  }
 
   if (success) {
     console.log('🎉 HTML文件合并成功！')
