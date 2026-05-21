@@ -1,6 +1,6 @@
 {
   "name": "quickui-design",
-  "version": "1.0.5",
+  "version": "1.1.0",
   "description": "QuickUI-Design, a UE5-UI design toolkit using React to design UE5's UI interactive interfaces.",
   "main": "index.js",
   "scripts": {
