@@ -22,7 +22,8 @@ module.exports = {
     ]
   },
   entry: {
-    index: './src/pages/template/index.tsx',
+    // index: './src/pages/template/index.tsx',
+    index: './src/pages/route-template/pages/index.tsx',
   },
   plugins: [
     new HtmlWebpackPlugin({

@@ -56,7 +56,7 @@ export default function UEConnectDemo() {
   return (
     <div
       data-nohit
-      className="flex flex-col items-center justify-center  absolute left-[200px] top-10 space-y-2 text-center text-white card p-4 rounded-md bg-slate-700/70"
+      className="flex flex-col items-center justify-center w-[350px] h-[450px] absolute right-[100px] top-10 space-y-2 text-center text-white   rounded-md bg-slate-700/70"
     >
       <h2 className="cursor-target text-2xl">UE4 Context Test</h2>
       <p>UE Connection Status: {isConnected ? 'Connected' : 'Not Connected'}</p>
