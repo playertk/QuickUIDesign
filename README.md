@@ -1,25 +1,24 @@
 # QuickUI-Design
 
-**QuickUI-Design** is a **Unreal Engine 5 (UE5)** UI design toolkit that leverages **React** to build interactive interfaces for UE5. 
+**QuickUI-Design** is a **Unreal Engine 5 (UE5)** UI design toolkit that leverages **React** to build interactive interfaces for UE5.
 
 ## Features
 
 - ⚡ **React-Driven UI** — Build UE5 interfaces with React 18 + TypeScript for a component-based development experience
 - 🔗 **Bidirectional UE5 Communication** — Real-time data exchange between Web ↔ UE5 via the `ue-connect` library
+- 🧭 **Routing Architecture** — React Router v7 with `createMemoryRouter` for seamless page navigation inside UE5 Web views (no URL bar needed)
+- 🎬 **Page Transition Animations** — Powered by framer-motion v11 with `AnimatePresence` for fluid route transitions
+- 📐 **Screen Anchor System** — Nine-position screen anchoring component (`ScreenAnchor` + `AnchorGrid`) for pixel-perfect UI layout
 - 🎨 **Tailwind CSS Styling** — Utility-first styling with Tailwind CSS 3.4 for rapid, beautiful UI development
-
 - 🖱️ **Mouse Event Penetration** — Use the `data-nohit` attribute to control mouse event pass-through behavior in UE5
 - 🧩 **Type Safety** — Fully TypeScript-powered development with comprehensive type definitions
 - 🛠️ **Asset Toolchain** — Built-in utilities for image-to-Base64 conversion, HTML merging, and more
-
-
 
 ## Prerequisites
 
 - **Node.js** >= 18.x
 - **npm** >= 9.x (or **pnpm** / **yarn**)
 - **UE5 Project** (for integration with the QuickUI UE5 Plugin)
-
 
 ## Installation & Usage
 
@@ -56,7 +55,6 @@ npm run build
 
 Build artifacts are output to the `dist/` directory. HTML files will be automatically formatted with Prettier after the build.
 
-
 ## NPM Scripts
 
 | Command | Description |
@@ -70,29 +68,52 @@ Build artifacts are output to the `dist/` directory. HTML files will be automati
 | `npm run format:lint` | ESLint auto-fix |
 | `npm run formatfix` | Prettier formatting + ESLint auto-fix |
 
-
-
 ## Project Structure
 
 ```
 QuickUIDesign/
-├── public/                    # Static assets (HTML template)
+├── public/                        # Static assets (HTML template, images, audio)
+│   ├── audios/light-on.mp3
+│   ├── img/lufei.png
 │   └── index.html
 ├── src/
-│   ├── assets/img/            # Image assets & Base64 text files
-│   ├── components/            # React components
-│   ├── lib/                   # Utility functions
-│   ├── pages/template/        # Entry point & App component
-│   ├── styles/                # Global styles (CSS)
-│   └── types/                 # Type definitions
-├── ue-connect/                # UE5 ↔ Web bridging library (local dependency)
-├── assets-tool/               # Asset processing utility scripts
+│   ├── assets/img/                # Image assets & Base64 text files
+│   ├── components/
+│   │   ├── Ohters/
+│   │   │   ├── DemoContent.tsx    # Mouse penetration demo
+│   │   │   └── UEConnect-Demo/    # UE5 communication demo
+│   │   ├── framer-motion/
+│   │   │   ├── animated-layout.tsx    # Motion.div wrapper for page content
+│   │   │   └── animated-outlet.tsx    # AnimatePresence-wrapped Outlet
+│   │   └── screen-anchor/
+│   │       └── index.tsx          # 9-position screen anchor (AnchorGrid + ScreenAnchor)
+│   ├── lib/
+│   │   ├── data/
+│   │   │   └── animate-data.tsx   # Default framer-motion animation presets
+│   │   └── utils.ts               # cn() helper (clsx + tailwind-merge)
+│   ├── pages/
+│   │   └── route-template/        # ★ Active entry (React Router v7)
+│   │       ├── pages/
+│   │       │   ├── index.tsx      # App entry (MemoryRouter + UEProvider)
+│   │       │   ├── layout.tsx     # Root layout (autofit.js, AnimatedOutlet)
+│   │       │   ├── error-page.tsx # Route error boundary
+│   │       │   ├── home/          # Home page (ScreenAnchor demo)
+│   │       │   └── show/          # Show/detail page (image loading demo)
+│   │       └── router/
+│   │           └── index.tsx      # Route definitions
+│   ├── styles/
+│   │   └── index.css              # Tailwind CSS directives
+│   └── types/
+│       └── @type.d.ts             # Type declarations
+├── ue-connect/                    # UE5 ↔ Web bridging library (local dependency)
+├── assets-tool/                   # Asset processing utility scripts
 │   ├── convertImageToBase64.js
 │   └── merge-html.js
-├── skills/quickuiapi/         # Qoder skill: QuickUI API development assistant
-├── rspack.config.js           # Rspack build configuration
-├── tailwind.config.js         # Tailwind CSS configuration
-├── tsconfig.json              # TypeScript configuration
+├── docs/template/                 # Template documentation (index.mdx)
+├── skills/quickuiapi/             # Qoder skill: QuickUI API development assistant
+├── rspack.config.js               # Rspack build configuration
+├── tailwind.config.js             # Tailwind CSS configuration
+├── tsconfig.json                  # TypeScript configuration
 ├── package.json
 └── .babelrc / .eslintrc.json / .prettierrc.js
 ```
@@ -103,6 +124,10 @@ QuickUIDesign/
 |-------|-------------|
 | `@` | `./src/` |
 | `ue-connect` | `./ue-connect/` |
+
+### Current Entry Point
+
+The active entry is `src/pages/route-template/pages/index.tsx` (configured in `rspack.config.js`). It uses `createMemoryRouter` instead of a browser router — navigation is managed entirely within the UE5 Web View since there is no URL bar.
 
 ---
 
