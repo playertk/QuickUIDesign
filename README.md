@@ -1,5 +1,7 @@
 # QuickUI-Design
 
+English | [中文](#quickui-design-中文)
+
 **QuickUI-Design** is a **Unreal Engine 5 (UE5)** UI design toolkit that leverages **React** to build interactive interfaces for UE5.
 
 ## Features
@@ -156,3 +158,162 @@ See the [LICENSE](./LICENSE) file for details.
 - **Author**: MarcoTin
 - **Email**: 277924771@qq.com
 - **Homepage**: [https://quickui.pixelbear.xyz](https://quickui.pixelbear.xyz)
+
+
+---
+
+# QuickUI-Design 中文
+
+**QuickUI-Design** 是一个 **Unreal Engine 5 (UE5)** UI 设计工具包，利用 **React** 为 UE5 构建交互式界面。
+
+## 特性
+
+- ⚡ **React 驱动 UI** — 使用 React 18 + TypeScript 构建 UE5 界面，获得基于组件的开发体验
+- 🔗 **UE5 双向通信** — 通过 `ue-connect` 库实现 Web ↔ UE5 之间的实时数据交换
+- 🧭 **路由架构** — React Router v7 配合 `createMemoryRouter`，在 UE5 Web 视图中实现无缝页面导航（无需 URL 地址栏）
+- 🎬 **页面过渡动画** — 基于 framer-motion v11 的 `AnimatePresence` 实现流畅的路由切换动画
+- 📐 **屏幕锚定系统** — 九宫格屏幕锚定组件（`ScreenAnchor` + `AnchorGrid`），实现像素级的精确 UI 布局
+- 🎨 **Tailwind CSS 样式** — 使用 Tailwind CSS 3.4 进行实用优先的样式设计，快速构建美观的 UI
+- 🖱️ **鼠标事件穿透** — 使用 `data-nohit` 属性控制鼠标事件在 UE5 中的穿透行为
+- 🧩 **类型安全** — 全 TypeScript 开发，配备完善的类型定义
+- 🛠️ **资源工具链** — 内置图片转 Base64、HTML 合并等实用工具
+
+## 前置要求
+
+- **Node.js** >= 18.x
+- **npm** >= 9.x（或 **pnpm** / **yarn**）
+- **UE5 项目**（用于集成 QuickUI UE5 插件）
+
+## 安装与使用
+
+### 1. 克隆项目
+
+```bash
+git clone https://github.com/playertk/QuickUIDesign.git
+
+cd QuickUIDesign
+```
+
+### 2. 安装依赖
+
+```bash
+npm install
+```
+
+> `ue-connect` 是位于 `ue-connect/` 目录下的本地依赖，安装过程中会自动链接。
+
+### 3. 启动开发服务器
+
+```bash
+npm run dev
+```
+
+默认情况下页面将在 `http://localhost:3000` 打开，并支持热模块替换（HMR）。
+
+### 4. 生产构建
+
+```bash
+npm run build
+```
+
+构建产物输出到 `dist/` 目录。构建完成后 HTML 文件将自动通过 Prettier 格式化。
+
+## NPM 脚本
+
+| 命令 | 描述 |
+|------|------|
+| `npm run dev` | 启动开发服务器（Rspack Serve，端口 3000） |
+| `npm run build` | 生产构建 + Prettier HTML 格式化 |
+| `npm run merge-html` | 合并 HTML 资源文件 |
+| `npm run base64img` | 将 `src/assets/img/` 下的图片转换为 Base64 |
+| `npm run prettier` | 格式化 `src/` 下的 TS/TSX 文件 |
+| `npm run lint` | ESLint 代码检查 |
+| `npm run format:lint` | ESLint 自动修复 |
+| `npm run formatfix` | Prettier 格式化 + ESLint 自动修复 |
+
+## 项目结构
+
+```
+QuickUIDesign/
+├── public/                        # 静态资源（HTML 模板、图片、音频）
+│   ├── audios/light-on.mp3
+│   ├── img/lufei.png
+│   └── index.html
+├── src/
+│   ├── assets/img/                # 图片资源及 Base64 文本文件
+│   ├── components/
+│   │   ├── Ohters/
+│   │   │   ├── DemoContent.tsx    # 鼠标穿透演示
+│   │   │   └── UEConnect-Demo/    # UE5 通信演示
+│   │   ├── framer-motion/
+│   │   │   ├── animated-layout.tsx    # 页面内容的 Motion.div 包装
+│   │   │   └── animated-outlet.tsx    # 基于 AnimatePresence 的 Outlet 包装
+│   │   └── screen-anchor/
+│   │       └── index.tsx          # 九宫格屏幕锚定（AnchorGrid + ScreenAnchor）
+│   ├── lib/
+│   │   ├── data/
+│   │   │   └── animate-data.tsx   # 默认 framer-motion 动画预设
+│   │   └── utils.ts               # cn() 辅助函数（clsx + tailwind-merge）
+│   ├── pages/
+│   │   └── route-template/        # ★ 当前活动入口（React Router v7）
+│   │       ├── pages/
+│   │       │   ├── index.tsx      # 应用入口（MemoryRouter + UEProvider）
+│   │       │   ├── layout.tsx     # 根布局（autofit.js, AnimatedOutlet）
+│   │       │   ├── error-page.tsx # 路由错误边界
+│   │       │   ├── home/          # 首页（ScreenAnchor 演示）
+│   │       │   └── show/          # 展示/详情页（图片加载演示）
+│   │       └── router/
+│   │           └── index.tsx      # 路由定义
+│   ├── styles/
+│   │   └── index.css              # Tailwind CSS 指令
+│   └── types/
+│       └── @type.d.ts             # 类型声明
+├── ue-connect/                    # UE5 ↔ Web 桥接库（本地依赖）
+├── assets-tool/                   # 资源处理工具脚本
+│   ├── convertImageToBase64.js
+│   └── merge-html.js
+├── docs/template/                 # 模板文档（index.mdx）
+├── skills/quickuiapi/             # Qoder 技能：QuickUI API 开发助手
+├── rspack.config.js               # Rspack 构建配置
+├── tailwind.config.js             # Tailwind CSS 配置
+├── tsconfig.json                  # TypeScript 配置
+├── package.json
+└── .babelrc / .eslintrc.json / .prettierrc.js
+```
+
+### 路径别名
+
+| 别名 | 映射路径 |
+|------|----------|
+| `@` | `./src/` |
+| `ue-connect` | `./ue-connect/` |
+
+### 当前入口点
+
+当前活动入口为 `src/pages/route-template/pages/index.tsx`（在 `rspack.config.js` 中配置）。它使用 `createMemoryRouter` 而非浏览器路由 —— 由于没有 URL 地址栏，导航完全在 UE5 Web View 内部管理。
+
+---
+
+## UE5 集成
+
+在你的 UE5 项目中安装 **QuickUI 插件**：
+
+- **QuickUI Plugin on Fab.com**：[https://fab.com/s/62c93f04e12e](https://fab.com/s/62c93f04e12e)
+
+> 更多 API 文档请参考 [skills/quickuiapi/](./skills/quickuiapi/) 目录下的规则文件。
+
+## 许可证
+
+**专有许可证 - 保留所有权利**
+
+本软件仅授权给授权用户使用。未经许可，禁止再分发、转售或公开共享源代码。
+
+详见 [LICENSE](./LICENSE) 文件。
+
+---
+
+## 联系方式
+
+- **作者**：MarcoTin
+- **邮箱**：277924771@qq.com
+- **主页**：[https://quickui.pixelbear.xyz](https://quickui.pixelbear.xyz)
