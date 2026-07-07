@@ -1,0 +1,20 @@
+{
+  "name": "clickdeck-core",
+  "version": "1.0.0",
+  "description": "ClickDeck visual editor core module",
+  "main": "dist/clickdeck-core.es.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/clickdeck-core.es.js",
+  "exports": {
+    ".": {
+      "import": "./dist/clickdeck-core.es.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.js"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0"
+  }
+}

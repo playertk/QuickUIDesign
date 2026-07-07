@@ -116,7 +116,12 @@ module.exports = {
     extensions: ['.js', '.jsx', '.ts', '.tsx'],
     alias: {
       '@': path.resolve(__dirname, './src'),
-      'ue-connect': path.resolve(__dirname, './ue-connect')
+      'ue-connect': path.resolve(__dirname, './ue-connect'),
+      '@dev': path.resolve(__dirname, './src/dev-tools'),
+      'clickdeck-core': path.resolve(__dirname, './clickdeck-core')
     }
-  }
+  },
+  externals: process.env.NODE_ENV === 'production'
+    ? { 'clickdeck-core': 'undefined' }
+    : {}
 }

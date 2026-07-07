@@ -5,6 +5,8 @@ import '@/styles/index.css'
 import AnimatedOutlet from '@/components/framer-motion/animated-outlet'
 import { useQuickUIEventListener } from 'ue-connect'
 import UEConnectDemo from '@/components/Ohters/UEConnect-Demo'
+import ClickDeckDevTools from '@dev/react/ClickDeckDevTools'
+import { ClickDeckToggle } from '@dev/react/ClickDeckToggle'
 
 export function Layout({ Fit = false }: { Fit?: boolean }) {
   useQuickUIEventListener('UEcallback', (event) => {})
@@ -23,6 +25,10 @@ export function Layout({ Fit = false }: { Fit?: boolean }) {
 
   return (
     <>
+      <div id="nav-bar" className="absolute">
+        <ClickDeckDevTools />
+        <ClickDeckToggle />
+      </div>
       <AnimatedOutlet />
       <div id="no-animation-driven">
         {/* 

@@ -15,6 +15,7 @@ English | [中文](#quickui-design-中文)
 - 🖱️ **Mouse Event Penetration** — Use the `data-nohit` attribute to control mouse event pass-through behavior in UE5
 - 🧩 **Type Safety** — Fully TypeScript-powered development with comprehensive type definitions
 - 🛠️ **Asset Toolchain** — Built-in utilities for image-to-Base64 conversion, HTML merging, and more
+- 🎨 **Visual DOM Editing** — Integrated **ClickDeck** visual editor for in-browser DOM style tweaking, AI Prompt export, and presentation mode
 
 ## Prerequisites
 
@@ -39,7 +40,7 @@ cd QuickUIDesign
 npm install
 ```
 
-> `ue-connect` is a local dependency located in the `ue-connect/` directory and will be linked automatically during installation.
+> `ue-connect` and `clickdeck-core` are local dependencies located in the `ue-connect/` and `clickdeck-core/` directories respectively, and will be linked automatically during installation. `clickdeck-core` requires `react@^18` as a peer dependency.
 
 ### 3. Start the Dev Server
 
@@ -108,6 +109,8 @@ QuickUIDesign/
 │   └── types/
 │       └── @type.d.ts             # Type declarations
 ├── ue-connect/                    # UE5 ↔ Web bridging library (local dependency)
+├── clickdeck-core/                # ClickDeck visual editor core module (local dependency, MIT)
+│                                  # 🔗 https://github.com/ningsiii/ClickDeck
 ├── assets-tool/                   # Asset processing utility scripts
 │   ├── convertImageToBase64.js
 │   └── merge-html.js
@@ -126,6 +129,7 @@ QuickUIDesign/
 |-------|-------------|
 | `@` | `./src/` |
 | `ue-connect` | `./ue-connect/` |
+| `clickdeck-core` | `./clickdeck-core/` |
 
 ### Current Entry Point
 
@@ -142,14 +146,16 @@ Install the **QuickUI Plugin** in your UE5 project
 
 >For more API documentation, refer to the rule files under the [skills/quickuiapi/](./skills/quickuiapi/) directory.
 
+## Acknowledgments
+
+- Special thanks to **[ClickDeck](https://github.com/ningsiii/ClickDeck)** for providing this excellent open-source project. Integrated as a local dependency `clickdeck-core`, it offers in-browser style editing, AI Prompt export, and presentation mode features.
 
 ## License
 
-**Proprietary License - All Rights Reserved**
+This project includes both open-source and proprietary components. See the [LICENSE](./LICENSE) file for details.
 
-This software is licensed to authorized users only. Redistribution, resale, or public sharing of the source code is prohibited without permission.
-
-See the [LICENSE](./LICENSE) file for details.
+- **ClickDeck** — MIT License (Copyright (c) 2026 ClickDeck contributors)
+- **QuickUIDesign (proprietary code)** — Commercial License (Copyright (c) 2026 MarcoTin. All Rights Reserved.)
 
 ---
 
@@ -177,6 +183,7 @@ See the [LICENSE](./LICENSE) file for details.
 - 🖱️ **鼠标事件穿透** — 使用 `data-nohit` 属性控制鼠标事件在 UE5 中的穿透行为
 - 🧩 **类型安全** — 全 TypeScript 开发，配备完善的类型定义
 - 🛠️ **资源工具链** — 内置图片转 Base64、HTML 合并等实用工具
+- 🎨 **可视化 DOM 编辑** — 集成 **ClickDeck** 可视化编辑器，支持浏览器内 DOM 样式调整、AI Prompt 导出和演示模式
 
 ## 前置要求
 
@@ -200,7 +207,7 @@ cd QuickUIDesign
 npm install
 ```
 
-> `ue-connect` 是位于 `ue-connect/` 目录下的本地依赖，安装过程中会自动链接。
+> `ue-connect` 和 `clickdeck-core` 是分别位于 `ue-connect/` 和 `clickdeck-core/` 目录下的本地依赖，安装过程中会自动链接。`clickdeck-core` 需要 `react@^18` 作为 peer 依赖。
 
 ### 3. 启动开发服务器
 
@@ -269,6 +276,8 @@ QuickUIDesign/
 │   └── types/
 │       └── @type.d.ts             # 类型声明
 ├── ue-connect/                    # UE5 ↔ Web 桥接库（本地依赖）
+├── clickdeck-core/                # ClickDeck 可视化编辑器核心模块（本地依赖，MIT）
+│                                  # 🔗 https://github.com/ningsiii/ClickDeck
 ├── assets-tool/                   # 资源处理工具脚本
 │   ├── convertImageToBase64.js
 │   └── merge-html.js
@@ -287,6 +296,7 @@ QuickUIDesign/
 |------|----------|
 | `@` | `./src/` |
 | `ue-connect` | `./ue-connect/` |
+| `clickdeck-core` | `./clickdeck-core/` |
 
 ### 当前入口点
 
@@ -302,13 +312,16 @@ QuickUIDesign/
 
 > 更多 API 文档请参考 [skills/quickuiapi/](./skills/quickuiapi/) 目录下的规则文件。
 
+## 致谢
+
+- 感谢 **[ClickDeck](https://github.com/ningsiii/ClickDeck)** 感谢提供的优秀开源项目。以 `clickdeck-core` 本地依赖形式集成，提供浏览器内样式编辑、AI Prompt 导出和演示模式功能。
+
 ## 许可证
 
-**专有许可证 - 保留所有权利**
+本项目包含开源和专有两部分代码，详见 [LICENSE](./LICENSE) 文件。
 
-本软件仅授权给授权用户使用。未经许可，禁止再分发、转售或公开共享源代码。
-
-详见 [LICENSE](./LICENSE) 文件。
+- **ClickDeck** — MIT 许可证（Copyright (c) 2026 ClickDeck contributors）
+- **QuickUIDesign（自有代码）** — 商业许可证（Copyright (c) 2026 MarcoTin. All Rights Reserved.）
 
 ---
 

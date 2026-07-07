@@ -6,6 +6,8 @@ import { UEProvider } from 'ue-connect'
 import UEConnectDemo from '@/components/Ohters/UEConnect-Demo'
 import DemoContent from '@/components/Ohters/DemoContent'
 import { ScreenAnchor, AnchorGrid } from '@/components/screen-anchor'
+import ClickDeckDevTools from '@dev/react/ClickDeckDevTools'
+import { ClickDeckToggle } from '@dev/react/ClickDeckToggle'
 
 export default function App({ Fit = true }: { Fit?: boolean }) {
   // useQuickUIEventListener必须在React组件中调用一次（事件名称随意），
@@ -27,6 +29,8 @@ export default function App({ Fit = true }: { Fit?: boolean }) {
 
   return (
     <UEProvider>
+      <ClickDeckDevTools />
+      <ClickDeckToggle />
       <AnchorGrid>
         <ScreenAnchor name="center-left">
           <div className="w-[100px] h-[100px] justify-center flex flex-col items-center text-white bg-red-500">

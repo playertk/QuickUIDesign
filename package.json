@@ -1,6 +1,6 @@
 {
   "name": "quickui-design",
-  "version": "1.2.0",
+  "version": "1.2.5",
   "description": "QuickUI-Design, a UE5-UI design toolkit using React to design UE5's UI interactive interfaces.",
   "main": "index.js",
   "scripts": {
@@ -59,6 +59,7 @@
     "styled-components": "^6.1.18",
     "tailwind-merge": "~2.6.0",
     "tailwindcss-animate": "~1.0.7",
-    "ue-connect": "./ue-connect"
+    "ue-connect": "./ue-connect",
+    "clickdeck-core": "./clickdeck-core"
   }
 }

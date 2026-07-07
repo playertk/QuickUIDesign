@@ -1,0 +1,11 @@
+import type { ElementLocator } from "../state/editor-state";
+export declare function describeElement(element: HTMLElement): string;
+export declare function isClickDeckUiElement(element: HTMLElement): boolean;
+export declare function createElementLocator(element: HTMLElement): ElementLocator;
+export declare function canAutoStartTextEditing(element: HTMLElement): boolean;
+export declare function findFirstEditableDescendant(root: HTMLElement): HTMLElement | null;
+export declare function isMeaningfulElement(element: HTMLElement): boolean;
+export declare function findMeaningfulDescendant(root: HTMLElement): HTMLElement | null;
+export declare function isElementVisible(element: HTMLElement): boolean;
+export declare function getSlideContext(element: HTMLElement): string | undefined;
+export declare function placeCaretFromPoint(target: HTMLElement, x: number, y: number): boolean;

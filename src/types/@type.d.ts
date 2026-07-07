@@ -12,3 +12,10 @@ declare module '*.txt' {
   const content: string
   export default content
 }
+
+// Rspack replaces process.env.NODE_ENV at build time via DefinePlugin
+declare const process: {
+  env: {
+    NODE_ENV: string
+  }
+}
