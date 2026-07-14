@@ -139,7 +139,7 @@ function findElementByLocator(locator) {
   for (const selector of candidates) {
     try {
       const el = document.querySelector(selector);
-      if (!(el instanceof HTMLElement)) {
+      if (!(el instanceof Element)) {
         continue;
       }
       if (el.tagName.toLowerCase() !== locator.tagName.toLowerCase()) {
@@ -163,6 +163,13 @@ function hydratePersistedPatches(persisted, logger) {
       continue;
     }
     if (entry.kind === "style") {
+      if (!(target instanceof HTMLElement)) {
+        logger?.warn?.("Persisted style patch target is not an HTMLElement; skipping", {
+          target: entry.targetDescriptor,
+          locator: entry.targetLocator
+        });
+        continue;
+      }
       patches.push({
         id: entry.id,
         kind: "style",
@@ -177,6 +184,13 @@ function hydratePersistedPatches(persisted, logger) {
       continue;
     }
     if (entry.kind === "attribute") {
+      if (!(target instanceof HTMLElement)) {
+        logger?.warn?.("Persisted attribute patch target is not an HTMLElement; skipping", {
+          target: entry.targetDescriptor,
+          locator: entry.targetLocator
+        });
+        continue;
+      }
       patches.push({
         id: entry.id,
         kind: "attribute",
@@ -212,10 +226,232 @@ function createEditHistory() {
   };
 }
 
+// src/content/complex-elements.ts
+var FORMULA_SELECTOR = "math, .katex, .mathjax, mjx-container";
+function getComplexElementKind(element) {
+  if (!element) {
+    return null;
+  }
+  const tagName = element.tagName.toLowerCase();
+  if (tagName === "svg") return "svg";
+  if (tagName === "canvas") return "canvas";
+  if (tagName === "iframe") return "iframe";
+  if (isFormulaElement(element)) return "formula";
+  return null;
+}
+function getComplexElementInfo(element) {
+  if (!element) {
+    return null;
+  }
+  const kind = getComplexElementKind(element);
+  if (!kind) {
+    return null;
+  }
+  switch (kind) {
+    case "svg":
+      return { kind, label: "svg", promptLabel: "inline SVG" };
+    case "canvas":
+      return { kind, label: "canvas", promptLabel: "canvas" };
+    case "formula":
+      return { kind, label: "formula", promptLabel: getFormulaPromptLabel(element) };
+    case "iframe":
+      return { kind, label: "iframe", promptLabel: getIframePromptLabel(element) };
+  }
+}
+function findComplexElementFromTarget(target) {
+  if (!(target instanceof Element)) {
+    return null;
+  }
+  if (isInsideClickDeckUi(target)) {
+    return null;
+  }
+  const directKind = getComplexElementKind(target);
+  if (directKind) {
+    return target;
+  }
+  const complex = target.closest(`svg, canvas, iframe, ${FORMULA_SELECTOR}`);
+  return complex && !isInsideClickDeckUi(complex) ? complex : null;
+}
+function isFormulaElement(element) {
+  const tagName = element.tagName.toLowerCase();
+  if (tagName === "math" || tagName === "mjx-container") {
+    return true;
+  }
+  if (!(element instanceof HTMLElement)) {
+    return false;
+  }
+  return element.classList.contains("katex") || element.classList.contains("mathjax");
+}
+function isInsideClickDeckUi(element) {
+  return Boolean(element.closest("[data-clickdeck='true']"));
+}
+function getComplexElementPromptNotes(element, isZh2) {
+  const info = getComplexElementInfo(resolvePromptTarget(element));
+  if (!info) {
+    return [];
+  }
+  const isSvgTextTarget = isSimpleSvgTextTarget(element);
+  if (isZh2) {
+    const lines2 = [`   \u590D\u6742\u5143\u7D20\uFF1A${info.promptLabel}\u3002`];
+    if (info.kind === "svg") {
+      lines2.push(
+        isSvgTextTarget ? "   \u8BF4\u660E\uFF1A\u8FD9\u662F inline SVG\u3002\u5F53\u524D\u53EA\u66FF\u6362\u5DF2\u68C0\u6D4B\u5230\u7684\u7B80\u5355 SVG \u6587\u5B57\u5185\u5BB9\uFF0C\u4E0D\u4FEE\u6539\u5185\u90E8\u8DEF\u5F84\u3001\u56FE\u5F62\u6216 viewBox \u7ED3\u6784\u3002" : "   \u8BF4\u660E\uFF1A\u8FD9\u662F inline SVG\uFF0C\u5F53\u524D\u53EA\u4FEE\u6539\u5176\u5916\u5C42\u6837\u5F0F\uFF0C\u4E0D\u8FDB\u5165\u5185\u90E8 path/text/viewBox \u7ED3\u6784\u3002"
+      );
+    } else if (info.kind === "canvas") {
+      lines2.push("   \u8BF4\u660E\uFF1A\u8FD9\u662F canvas\uFF0C\u5185\u5BB9\u662F\u7ED8\u5236\u7ED3\u679C\uFF1B\u5F53\u524D\u53EA\u4FEE\u6539\u5916\u5C42\u6837\u5F0F\uFF0C\u4E0D\u8BC6\u522B\u6216\u4FEE\u6539\u5185\u90E8\u7ED8\u56FE\u5BF9\u8C61\uFF0C\u5982\u9700\u6539\u5185\u5BB9\u9700\u5148\u4FEE\u6539\u5BF9\u5E94\u7ED8\u5236\u4EE3\u7801\u6216\u751F\u6210\u903B\u8F91\u3002");
+    } else if (info.kind === "formula") {
+      lines2.push("   \u8BF4\u660E\uFF1A\u8FD9\u662F\u6E32\u67D3\u540E\u7684\u516C\u5F0F\u533A\u57DF\uFF1B\u5F53\u524D\u53EA\u4FEE\u6539\u5916\u5C42\u6837\u5F0F\uFF0C\u4E0D\u4FEE\u6539\u5185\u90E8\u516C\u5F0F\u7ED3\u6784\u3002\u5982\u9700\u6539\u5185\u5BB9\u5E94\u5148\u4FEE\u6539\u5BF9\u5E94\u7684\u6E90\u516C\u5F0F\uFF08\u5982 LaTeX \u6216 MathML\uFF09\u3002");
+    } else if (info.kind === "iframe") {
+      lines2.push(`   \u8BF4\u660E\uFF1A\u8FD9\u662F iframe \u5D4C\u5165\u5185\u5BB9${getIframeDetails(element, true)}\uFF1B\u5F53\u524D\u53EA\u4FEE\u6539\u5916\u5C42 iframe\uFF0C\u4E0D\u8FDB\u5165\u5185\u90E8\u9875\u9762\uFF0C\u5982\u9700\u6539\u5185\u5BB9\u5E94\u5148\u4FEE\u6539\u5176\u52A0\u8F7D\u9875\u9762\u7684\u6E90\u4EE3\u7801\u6216\u751F\u6210\u903B\u8F91\u3002`);
+    }
+    return lines2;
+  }
+  const lines = [`   Complex element: ${info.promptLabel}.`];
+  if (info.kind === "svg") {
+    lines.push(
+      isSvgTextTarget ? "   Note: This is inline SVG. Only detected simple SVG text content is changed; internal paths, graphics, and viewBox structure are not edited." : "   Note: This is inline SVG. Only outer styles are changed; internal path/text/viewBox structure is not edited."
+    );
+  } else if (info.kind === "canvas") {
+    lines.push("   Note: This is canvas. Its content is drawn output; only outer styles are changed. To change its content, edit the underlying drawing code or generation logic.");
+  } else if (info.kind === "formula") {
+    lines.push("   Note: This is a rendered formula region. Only outer styles are changed; the underlying formula source (such as LaTeX or MathML) is not edited.");
+  } else if (info.kind === "iframe") {
+    lines.push(`   Note: This is embedded iframe content${getIframeDetails(element, false)}. Only the outer iframe is changed; to modify its content, edit the source page or generation logic loaded inside the iframe.`);
+  }
+  return lines;
+}
+function isSimpleSvgTextTarget(element) {
+  const tagName = element.tagName.toLowerCase();
+  return tagName === "text" || tagName === "tspan";
+}
+function getEditableSvgTextTarget(target) {
+  if (!(target instanceof SVGElement)) {
+    return null;
+  }
+  const tagName = target.tagName.toLowerCase();
+  if (tagName !== "text" && tagName !== "tspan") {
+    return null;
+  }
+  const ownerSvg = target.closest("svg");
+  if (!(ownerSvg instanceof SVGSVGElement)) {
+    return null;
+  }
+  const svgTextState = getSvgTextEditState(ownerSvg);
+  if (!svgTextState || svgTextState.mode !== "editable") {
+    return null;
+  }
+  const editableItem = svgTextState.items.find((item) => item.target === target);
+  return editableItem?.target ?? null;
+}
+function getSvgTextEditState(element) {
+  if (!(element instanceof SVGSVGElement)) {
+    return null;
+  }
+  const textElements = Array.from(element.querySelectorAll("text"));
+  if (textElements.length === 0) {
+    return { mode: "none" };
+  }
+  const items = [];
+  let sawComplex = false;
+  for (const textEl of textElements) {
+    if (isInsideUnsupportedSvgContainer(textEl) || textEl.querySelector("textPath, foreignObject")) {
+      sawComplex = true;
+      continue;
+    }
+    if (textEl.children.length === 0) {
+      const value = normalizeSvgText(textEl.textContent);
+      if (value) {
+        items.push({
+          id: `text-${items.length + 1}`,
+          label: `Text ${items.length + 1}`,
+          value,
+          target: textEl
+        });
+      }
+      continue;
+    }
+    const childElements = Array.from(textEl.children);
+    const hasOnlySimpleTspans = childElements.length > 0 && childElements.every((child) => child.tagName.toLowerCase() === "tspan") && childElements.every((child) => child.children.length === 0) && hasNoDirectTextOutsideChildren(textEl);
+    if (!hasOnlySimpleTspans) {
+      sawComplex = true;
+      continue;
+    }
+    for (const child of childElements) {
+      const tspan = child;
+      const value = normalizeSvgText(tspan.textContent);
+      if (!value) {
+        continue;
+      }
+      items.push({
+        id: `text-${items.length + 1}`,
+        label: `Text ${items.length + 1}`,
+        value,
+        target: tspan
+      });
+    }
+  }
+  if (sawComplex) {
+    return { mode: "complex" };
+  }
+  if (items.length === 0) {
+    return { mode: "none" };
+  }
+  return { mode: "editable", items };
+}
+function getFormulaPromptLabel(element) {
+  const tagName = element.tagName.toLowerCase();
+  if (tagName === "math") return "formula / MathML";
+  if (tagName === "mjx-container") return "formula / MathJax";
+  if (element instanceof HTMLElement && element.classList.contains("katex")) return "formula / KaTeX";
+  if (element instanceof HTMLElement && element.classList.contains("mathjax")) return "formula / MathJax";
+  return "formula";
+}
+function getIframePromptLabel(element) {
+  if (!(element instanceof HTMLIFrameElement)) {
+    return "iframe";
+  }
+  return element.hasAttribute("srcdoc") ? "iframe / srcdoc" : "iframe";
+}
+function getIframeDetails(element, isZh2) {
+  if (!(element instanceof HTMLIFrameElement)) {
+    return "";
+  }
+  const details = [];
+  const src = element.getAttribute("src");
+  if (src) {
+    details.push(`src=${JSON.stringify(src.slice(0, 120))}`);
+  }
+  if (element.hasAttribute("srcdoc")) {
+    details.push(isZh2 ? "\u5305\u542B srcdoc" : "has srcdoc");
+  }
+  return details.length ? ` (${details.join(", ")})` : "";
+}
+function resolvePromptTarget(element) {
+  if (getComplexElementKind(element)) {
+    return element;
+  }
+  return element.closest(`svg, canvas, iframe, ${FORMULA_SELECTOR}`) ?? element;
+}
+function isInsideUnsupportedSvgContainer(element) {
+  return Boolean(element.closest("defs, mask, clipPath, foreignObject"));
+}
+function hasNoDirectTextOutsideChildren(element) {
+  return Array.from(element.childNodes).every((node) => {
+    if (node.nodeType !== Node.TEXT_NODE) {
+      return true;
+    }
+    return !(node.textContent ?? "").trim();
+  });
+}
+function normalizeSvgText(value) {
+  return (value ?? "").replace(/\s+/g, " ").trim();
+}
+
 // src/content/dom-utils.ts
 function describeElement(element) {
   const id = element.id ? `#${element.id}` : "";
-  const className = typeof element.className === "string" && element.className.trim() ? `.${element.className.trim().split(/\s+/).slice(0, 2).join(".")}` : "";
+  const classAttr = element.getAttribute("class")?.trim() ?? "";
+  const className = classAttr ? `.${classAttr.split(/\s+/).slice(0, 2).join(".")}` : "";
   return `${element.tagName.toLowerCase()}${id}${className}`;
 }
 function isClickDeckUiElement(element) {
@@ -259,6 +495,9 @@ function createElementLocator(element) {
   };
 }
 function pickBackgroundImageHint(element) {
+  if (!(element instanceof HTMLElement)) {
+    return void 0;
+  }
   try {
     const style = window.getComputedStyle(element);
     const bg = style.getPropertyValue("background-image");
@@ -278,7 +517,7 @@ function pickSemanticRole(element) {
   if (tagName === "a") return "link";
   if (tagName === "input" || tagName === "textarea" || tagName === "select") return "input";
   if (tagName === "table") return "tableLike";
-  const className = (typeof element.className === "string" ? element.className : "").toLowerCase();
+  const className = (element.getAttribute("class") ?? "").toLowerCase();
   if (className.includes("card")) return "cardLike";
   if (className.includes("section") || className.includes("container") || className.includes("wrapper")) return "sectionLike";
   if (className.includes("chart") || className.includes("graph")) return "chartLike";
@@ -332,7 +571,10 @@ function canAutoStartTextEditing(element) {
     return false;
   }
   const tagName = element.tagName.toLowerCase();
-  if (tagName === "img" || tagName === "button" || tagName === "input" || tagName === "textarea" || tagName === "select" || tagName === "svg" || tagName === "canvas") {
+  if (getComplexElementKind(element)) {
+    return false;
+  }
+  if (tagName === "img" || tagName === "button" || tagName === "input" || tagName === "textarea" || tagName === "select" || tagName === "svg" || tagName === "canvas" || tagName === "iframe") {
     return false;
   }
   if (element.isContentEditable) {
@@ -420,7 +662,7 @@ function pickImageHint(element) {
   return basename || void 0;
 }
 function pickStableClassHint(element) {
-  const className = typeof element.className === "string" ? element.className : "";
+  const className = element.getAttribute("class") ?? "";
   const classes = className.split(/\s+/).map((value) => value.trim()).filter(Boolean);
   for (const candidate of classes) {
     if (!isLikelyStableToken(candidate)) {
@@ -842,8 +1084,26 @@ var englishLabels = {
   imageMax100: "Max 100%",
   imageContain: "Contain",
   imageCover: "Cover",
-  smaller: "Width -",
-  larger: "Width +",
+  complexSelectedSvg: "Selected: svg",
+  complexSelectedCanvas: "Selected: canvas",
+  complexSelectedFormula: "Selected: formula",
+  complexSelectedIframe: "Selected: iframe",
+  complexSvgHint: "Supports outer scaling, spacing, export, and AI prompt handoff. Internal SVG editing is not supported.",
+  complexCanvasHint: "Canvas content is drawn output. Only the whole block size and spacing can be adjusted.",
+  complexFormulaHint: "Formula regions support only outer size and spacing adjustments. Edit the source formula separately.",
+  complexIframeHint: "Embedded iframe content is not edited internally. Modify the loaded page or srcdoc source first.",
+  svgTextSection: "SVG text",
+  editSvgText: "Edit SVG text",
+  svgTextEditableHint: "Simple editable SVG text detected. Click the text itself to edit in place. Text does not reflow automatically.",
+  svgTextNoneEditable: "No editable SVG text was detected. It may already be converted into shapes.",
+  svgTextComplex: "SVG text was detected, but the structure is too complex to edit safely. Update the original SVG code instead.",
+  svgTextWarning: "SVG text does not reflow automatically. Longer text may overflow.",
+  svgTextEditorTitle: "Edit SVG text",
+  svgTextApply: "Apply",
+  svgTextCancel: "Close",
+  svgTextItemPrefix: "Text",
+  smaller: "-",
+  larger: "+",
   round: "Round",
   replaceImage: "Replace image",
   replaceVideo: "Replace video",
@@ -991,8 +1251,26 @@ var chineseLabels = {
   imageMax100: "\u6700\u5927 100%",
   imageContain: "\u5B8C\u6574\u663E\u793A",
   imageCover: "\u586B\u6EE1\u88C1\u5207",
-  smaller: "\u5BBD\u5EA6 -",
-  larger: "\u5BBD\u5EA6 +",
+  complexSelectedSvg: "\u5F53\u524D\u9009\u4E2D\uFF1Asvg",
+  complexSelectedCanvas: "\u5F53\u524D\u9009\u4E2D\uFF1Acanvas",
+  complexSelectedFormula: "\u5F53\u524D\u9009\u4E2D\uFF1A\u516C\u5F0F",
+  complexSelectedIframe: "\u5F53\u524D\u9009\u4E2D\uFF1Aiframe",
+  complexSvgHint: "\u652F\u6301\u6574\u4F53\u7F29\u653E\u3001\u95F4\u8DDD\u3001\u5BFC\u51FA\u548C AI prompt \u4EA4\u63A5\uFF1B\u4E0D\u652F\u6301\u7F16\u8F91 SVG \u5185\u90E8\u7ED3\u6784\u3002",
+  complexCanvasHint: "Canvas \u5185\u5BB9\u662F\u7ED8\u5236\u7ED3\u679C\uFF0C\u53EA\u80FD\u8C03\u6574\u6574\u4F53\u5C3A\u5BF8\u548C\u95F4\u8DDD\uFF0C\u4E0D\u80FD\u76F4\u63A5\u4FEE\u6539\u5185\u90E8\u5185\u5BB9\u3002",
+  complexFormulaHint: "\u516C\u5F0F\u533A\u57DF\u4EC5\u652F\u6301\u6574\u4F53\u5927\u5C0F\u548C\u95F4\u8DDD\u8C03\u6574\uFF0C\u5185\u90E8\u5185\u5BB9\u9700\u8981\u4FEE\u6539\u6E90\u516C\u5F0F\u3002",
+  complexIframeHint: "iframe \u662F\u5D4C\u5165\u9875\u9762\uFF0C\u4E0D\u8FDB\u5165\u5185\u90E8\u7ED3\u6784\uFF1B\u5185\u90E8\u5185\u5BB9\u9700\u8981\u5148\u4FEE\u6539\u6240\u52A0\u8F7D\u9875\u9762\u6216 srcdoc \u6E90\u4EE3\u7801\u3002",
+  svgTextSection: "SVG \u6587\u5B57",
+  editSvgText: "\u4FEE\u6539 SVG \u6587\u5B57",
+  svgTextEditableHint: "\u68C0\u6D4B\u5230\u53EF\u7F16\u8F91 SVG \u6587\u5B57\u3002\u8BF7\u76F4\u63A5\u70B9\u51FB\u6587\u5B57\u539F\u4F4D\u4FEE\u6539\uFF1B\u6587\u5B57\u4E0D\u4F1A\u81EA\u52A8\u91CD\u65B0\u6392\u7248\u3002",
+  svgTextNoneEditable: "\u672A\u68C0\u6D4B\u5230\u53EF\u7F16\u8F91 SVG \u6587\u5B57\uFF0C\u53EF\u80FD\u5DF2\u88AB\u8F6C\u4E3A\u56FE\u5F62\u3002",
+  svgTextComplex: "\u68C0\u6D4B\u5230 SVG \u6587\u5B57\uFF0C\u4F46\u7ED3\u6784\u8F83\u590D\u6742\uFF0C\u5F53\u524D\u65E0\u6CD5\u76F4\u63A5\u4FEE\u6539\u3002\u8BF7\u5148\u4FEE\u6539\u8BE5 SVG \u7684\u539F\u59CB\u7ED3\u6784\u4EE3\u7801\u3002",
+  svgTextWarning: "SVG \u6587\u5B57\u4E0D\u4F1A\u81EA\u52A8\u91CD\u65B0\u6392\u7248\uFF0C\u6587\u5B57\u53D8\u957F\u53EF\u80FD\u4F1A\u6EA2\u51FA\u3002",
+  svgTextEditorTitle: "\u4FEE\u6539 SVG \u6587\u5B57",
+  svgTextApply: "\u5E94\u7528",
+  svgTextCancel: "\u5173\u95ED",
+  svgTextItemPrefix: "\u6587\u5B57",
+  smaller: "-",
+  larger: "+",
   round: "\u5706\u5F62",
   replaceImage: "\u66FF\u6362\u56FE\u7247",
   replaceVideo: "\u66FF\u6362\u89C6\u9891",
@@ -1295,6 +1573,31 @@ function injectBaseStyles(rootId2) {
       line-height: 1.4;
     }
 
+    .clickdeck-panel__complex-notice {
+      margin-top: 8px;
+      padding: 8px 10px;
+      border: 1px solid rgba(120, 84, 53, 0.18);
+      border-radius: 8px;
+      background: #fff8ed;
+      color: #5b4635;
+    }
+
+    .clickdeck-panel__complex-notice[hidden] {
+      display: none;
+    }
+
+    .clickdeck-panel__complex-title {
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .clickdeck-panel__complex-body {
+      font-size: 11px;
+      line-height: 1.45;
+      color: #7a6554;
+    }
+
     .clickdeck-panel__section {
       margin-top: 12px;
       padding-top: 12px;
@@ -1320,6 +1623,13 @@ function injectBaseStyles(rootId2) {
       margin-bottom: 8px;
     }
 
+    .clickdeck-panel__sub-hint {
+      margin-top: 6px;
+      font-size: 11px;
+      line-height: 1.45;
+      color: #7a6554;
+    }
+
     .clickdeck-panel__group {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1343,6 +1653,16 @@ function injectBaseStyles(rootId2) {
     .clickdeck-panel__group--ask-gemini .clickdeck-button {
       min-height: 34px;
       white-space: nowrap;
+    }
+
+    .clickdeck-panel__group--media-actions {
+      grid-template-columns: minmax(0, 1fr) 44px 44px;
+      align-items: stretch;
+    }
+
+    .clickdeck-panel__group--media-size {
+      grid-template-columns: 44px 44px minmax(0, 1fr);
+      align-items: stretch;
     }
 
     .clickdeck-panel__spacing-label {
@@ -1467,6 +1787,19 @@ function injectBaseStyles(rootId2) {
       font-weight: 600;
     }
 
+    .clickdeck-button--media-source {
+      min-height: 34px;
+      white-space: nowrap;
+      padding: 0 12px;
+    }
+
+    .clickdeck-button--media-size {
+      min-width: 44px;
+      padding: 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
     .clickdeck-prompt-overlay {
       position: fixed;
       inset: 0;
@@ -1544,6 +1877,114 @@ function injectBaseStyles(rootId2) {
       display: flex;
       gap: 6px;
       justify-content: flex-end;
+    }
+
+    .clickdeck-svg-text-modal__rows {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: min(360px, calc(100vh - 260px));
+      overflow-y: auto;
+    }
+
+    .clickdeck-svg-text-modal__row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .clickdeck-svg-text-modal__label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #6b4e35;
+    }
+
+    .clickdeck-svg-text-modal__input {
+      width: 100%;
+      min-height: 34px;
+      padding: 0 10px;
+      border: 1px solid #e8d5b0;
+      border-radius: 6px;
+      background: #fff;
+      color: #3d2f24;
+      font-size: 13px;
+    }
+
+    .clickdeck-svg-text-modal__input:focus {
+      outline: 2px solid #c8a47a;
+      outline-offset: -1px;
+    }
+
+    .clickdeck-svg-inline-highlight {
+      border: 2px solid rgba(249, 115, 22, 0.9);
+      border-radius: 6px;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.18);
+      background: rgba(255, 255, 255, 0.02);
+      pointer-events: none;
+    }
+
+    .clickdeck-svg-inline-popover {
+      position: fixed;
+      min-width: 180px;
+      max-width: min(280px, calc(100vw - 24px));
+      padding: 10px;
+      border: 1px solid rgba(120, 84, 53, 0.22);
+      border-radius: 10px;
+      background: rgba(255, 250, 244, 0.98);
+      box-shadow: 0 16px 36px rgba(49, 33, 18, 0.18);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: auto;
+      z-index: 2147483647;
+    }
+
+    .clickdeck-svg-inline-popover__title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #6b4e35;
+      line-height: 1.3;
+    }
+
+    .clickdeck-svg-inline-popover__input {
+      width: 100%;
+      min-height: 34px;
+      padding: 0 10px;
+      border: 1px solid rgba(120, 84, 53, 0.24);
+      border-radius: 8px;
+      background: #fff;
+      caret-color: currentColor;
+    }
+
+    .clickdeck-svg-inline-popover__input:focus {
+      outline: 2px solid rgba(185, 133, 74, 0.9);
+      outline-offset: 0;
+    }
+
+    .clickdeck-svg-inline-popover__actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .clickdeck-svg-inline-popover__button {
+      min-width: 54px;
+      height: 28px;
+      padding: 0 10px;
+      border: 1px solid rgba(120, 84, 53, 0.22);
+      border-radius: 7px;
+      background: #fff;
+      color: #4b3525;
+      font-size: 12px;
+      font-weight: 600;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    .clickdeck-svg-inline-popover__button--primary {
+      background: #f59e0b;
+      border-color: #f59e0b;
+      color: #fff;
     }
 
     .clickdeck-notice {
@@ -2044,6 +2485,36 @@ function createPanel(onAction, options = {}) {
       currentContext = context;
       updateContextUI();
     },
+    setSvgTextEditorState: (state) => {
+      const existing = element.querySelector(".clickdeck-svg-text-editor-state");
+      if (existing) {
+        existing.remove();
+      }
+      if (!state) {
+        return;
+      }
+      const badge = document.createElement("div");
+      badge.className = "clickdeck-svg-text-editor-state";
+      badge.dataset.clickdeck = "true";
+      badge.textContent = state.message;
+      Object.assign(badge.style, {
+        padding: "4px 8px",
+        fontSize: "11px",
+        borderRadius: "6px",
+        marginBottom: "4px"
+      });
+      if (state.mode === "editable") {
+        badge.style.background = "#1a3a2a";
+        badge.style.color = "#7acc4a";
+      } else {
+        badge.style.background = "#3a1a1a";
+        badge.style.color = "#e85d5d";
+      }
+      const intentSection = element.querySelector('[data-section="intent"]');
+      if (intentSection) {
+        intentSection.parentNode?.insertBefore(badge, intentSection);
+      }
+    },
     setPresentationAvailability: (hasSlides) => {
       canPresent = hasSlides;
       updateContextUI();
@@ -2144,6 +2615,60 @@ function createPanel(onAction, options = {}) {
     },
     hideSavedEditsNotice: () => {
       element.querySelector(".clickdeck-notice")?.remove();
+    },
+    showSvgTextEditor: (options2) => {
+      element.querySelector(".clickdeck-svg-text-editor")?.remove();
+      const editorEl = document.createElement("div");
+      editorEl.className = "clickdeck-svg-text-editor";
+      editorEl.dataset.clickdeck = "true";
+      const warningEl = document.createElement("div");
+      warningEl.className = "clickdeck-svg-text-editor__warning";
+      warningEl.textContent = options2.warning;
+      const listEl = document.createElement("div");
+      listEl.className = "clickdeck-svg-text-editor__list";
+      const inputs = [];
+      for (const item of options2.items) {
+        const row = document.createElement("div");
+        row.className = "clickdeck-svg-text-editor__row";
+        const labelEl = document.createElement("label");
+        labelEl.className = "clickdeck-svg-text-editor__label";
+        labelEl.textContent = item.label;
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "clickdeck-svg-text-editor__input";
+        input.value = item.value;
+        input.dataset.svgTextId = item.id;
+        row.append(labelEl, input);
+        listEl.appendChild(row);
+        inputs.push(input);
+      }
+      const actionsEl = document.createElement("div");
+      actionsEl.className = "clickdeck-svg-text-editor__actions";
+      const applyBtn = document.createElement("button");
+      applyBtn.type = "button";
+      applyBtn.className = "clickdeck-button clickdeck-button--primary";
+      applyBtn.textContent = "Apply";
+      applyBtn.addEventListener("click", () => {
+        const updates = inputs.map((inp) => ({
+          id: inp.dataset.svgTextId ?? "",
+          value: inp.value
+        }));
+        options2.onApply(updates);
+        editorEl.remove();
+      });
+      const cancelBtn = document.createElement("button");
+      cancelBtn.type = "button";
+      cancelBtn.className = "clickdeck-button";
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.addEventListener("click", () => {
+        editorEl.remove();
+      });
+      actionsEl.append(applyBtn, cancelBtn);
+      editorEl.append(warningEl, listEl, actionsEl);
+      const header2 = element.querySelector(".clickdeck-panel__header");
+      if (header2 && header2.nextSibling) {
+        header2.parentNode?.insertBefore(editorEl, header2.nextSibling);
+      }
     }
   };
 }
@@ -2229,6 +2754,10 @@ function getEditableTarget(target, currentSelected) {
   return resolveEditableTarget(target, currentSelected).target;
 }
 function resolveEditableTarget(target, currentSelected) {
+  const complexElement = findComplexElementFromTarget(target);
+  if (complexElement) {
+    return { target: complexElement, source: "direct" };
+  }
   if (!(target instanceof HTMLElement)) {
     return { target: null, source: "none" };
   }
@@ -2506,15 +3035,31 @@ function applyStyleAction(logger, element, action) {
       break;
     }
     case "image-width-smaller": {
+      if (getComplexElementKind(element) === "formula") {
+        changes = buildFormulaScaleChanges(element, computed, -1);
+        break;
+      }
+      if (element instanceof HTMLVideoElement) {
+        changes = buildVideoScaleChanges(element, computed, -1);
+        break;
+      }
       const current = element.style.width || computed.width;
       const next = stepSize(current, -1);
-      changes = buildImageScaleChanges(element, computed, next);
+      changes = buildMediaScaleChanges(element, computed, next);
       break;
     }
     case "image-width-larger": {
+      if (getComplexElementKind(element) === "formula") {
+        changes = buildFormulaScaleChanges(element, computed, 1);
+        break;
+      }
+      if (element instanceof HTMLVideoElement) {
+        changes = buildVideoScaleChanges(element, computed, 1);
+        break;
+      }
       const current = element.style.width || computed.width;
       const next = stepSize(current, 1);
-      changes = buildImageScaleChanges(element, computed, next);
+      changes = buildMediaScaleChanges(element, computed, next);
       break;
     }
     case "image-maxwidth-100":
@@ -2576,7 +3121,7 @@ function applyStyleAction(logger, element, action) {
   logger.info("Style action applied", { action, target: describeElement(element) });
   return changes;
 }
-function buildImageScaleChanges(element, computed, nextWidth) {
+function buildMediaScaleChanges(element, computed, nextWidth) {
   const changes = [
     {
       property: "width",
@@ -2594,6 +3139,53 @@ function buildImageScaleChanges(element, computed, nextWidth) {
     });
   }
   return changes;
+}
+function buildFormulaScaleChanges(element, computed, direction) {
+  const current = readPixelValue(computed.fontSize, 16);
+  return [{
+    property: "fontSize",
+    before: element.style.fontSize,
+    after: `${clamp(current + 2 * direction, 8, 120)}px`
+  }];
+}
+function buildVideoScaleChanges(element, computed, direction) {
+  const currentWidth = readPixelValue(element.style.width || computed.width, 0);
+  const currentHeight = readPixelValue(element.style.height || computed.height, 0);
+  const intrinsicWidth = typeof element.videoWidth === "number" ? element.videoWidth : 0;
+  const intrinsicHeight = typeof element.videoHeight === "number" ? element.videoHeight : 0;
+  if (currentWidth <= 0) {
+    const nextWidth2 = stepSize(computed.width, direction);
+    return buildMediaScaleChanges(element, computed, nextWidth2);
+  }
+  const nextWidth = clamp(currentWidth + 20 * direction, 20, 2e3);
+  const ratio = intrinsicWidth > 0 && intrinsicHeight > 0 ? intrinsicHeight / intrinsicWidth : currentHeight > 0 ? currentHeight / currentWidth : 0;
+  if (ratio <= 0) {
+    const nextWidthFallback = stepSize(computed.width, direction);
+    return buildMediaScaleChanges(element, computed, nextWidthFallback);
+  }
+  const nextHeight = clamp(roundTo(nextWidth * ratio, 2), 20, 2e3);
+  return [
+    {
+      property: "width",
+      before: element.style.width,
+      after: `${nextWidth}px`
+    },
+    {
+      property: "height",
+      before: element.style.height,
+      after: `${nextHeight}px`
+    },
+    {
+      property: "minWidth",
+      before: element.style.minWidth,
+      after: "0px"
+    },
+    {
+      property: "minHeight",
+      before: element.style.minHeight,
+      after: "0px"
+    }
+  ];
 }
 function stepSize(value, direction) {
   const trimmed = (value || "").toString().trim();
@@ -2726,135 +3318,6 @@ function exportHtmlSnapshot(logger) {
   } catch (error) {
     logger.error("Failed to export HTML snapshot", { error });
   }
-}
-
-// src/content/css-facts.ts
-var MEDIA_TAGS = /* @__PURE__ */ new Set(["img", "svg", "canvas", "video"]);
-var TEXT_TAGS = /* @__PURE__ */ new Set(["p", "span", "a", "button", "label", "li", "td", "th", "h1", "h2", "h3", "h4", "h5", "h6"]);
-var OVERLAY_HINT_PATTERN = /(^|[-_\s])(mask|mosaic|overlay|badge|tooltip|popover|modal|floating|absolute)([-_\s]|$)/i;
-function addFact(facts, name, value) {
-  const normalized = (value ?? "").trim();
-  if (!normalized) return;
-  facts.push(`${name}: ${normalized}`);
-}
-function addFactIfNot(facts, name, value, ignored) {
-  const normalized = (value ?? "").trim();
-  if (!normalized || ignored.includes(normalized)) return;
-  addFact(facts, name, normalized);
-}
-function isIgnoredValue(value, ignored) {
-  return ignored.includes(value);
-}
-function hasTextFeature(element) {
-  const tagName = element.tagName.toLowerCase();
-  return TEXT_TAGS.has(tagName) || (element.textContent ?? "").trim().length > 0;
-}
-function hasMediaFeature(element, style) {
-  const tagName = element.tagName.toLowerCase();
-  if (MEDIA_TAGS.has(tagName)) return true;
-  const objectFit = style.getPropertyValue("object-fit").trim();
-  const objectPosition = style.getPropertyValue("object-position").trim();
-  return Boolean(
-    objectFit && objectFit !== "fill" || objectPosition && objectPosition !== "50% 50%"
-  );
-}
-function hasLayoutFeature(style) {
-  const display = style.getPropertyValue("display").trim();
-  const hasNonDefault = (name, ignored) => {
-    const value = style.getPropertyValue(name).trim();
-    return Boolean(value && !isIgnoredValue(value, ignored));
-  };
-  return display === "flex" || display === "grid" || hasNonDefault("gap", ["normal", "0px"]) || hasNonDefault("row-gap", ["normal", "0px"]) || hasNonDefault("column-gap", ["normal", "0px"]) || hasNonDefault("padding", ["0", "0px", "0px 0px", "0px 0px 0px", "0px 0px 0px 0px"]) || hasNonDefault("margin", ["0", "0px", "0px 0px", "0px 0px 0px", "0px 0px 0px 0px"]) || hasNonDefault("align-items", ["normal", "stretch"]) || hasNonDefault("justify-content", ["normal", "start", "flex-start"]);
-}
-function hasPositioningFeature(style) {
-  const position = style.getPropertyValue("position").trim();
-  const transform = style.getPropertyValue("transform").trim();
-  const zIndex = style.getPropertyValue("z-index").trim();
-  return Boolean(position && position !== "static") || Boolean(transform && transform !== "none") || Boolean(zIndex && zIndex !== "auto");
-}
-function hasOverlayHint(element, style) {
-  const hintText = [element.className, element.id, element.getAttribute("role")].join(" ");
-  if (OVERLAY_HINT_PATTERN.test(hintText)) return true;
-  if (element.getAttribute("aria-hidden") === "true" && hasPositioningFeature(style)) return true;
-  return false;
-}
-function getRectSize(element) {
-  const rect = element.getBoundingClientRect();
-  const width = Math.round(rect.width);
-  const height = Math.round(rect.height);
-  if (width <= 0 && height <= 0) return null;
-  return `${width} x ${height}`;
-}
-function pickKind(element, style) {
-  if (hasOverlayHint(element, style)) return "overlay";
-  if (hasMediaFeature(element, style)) return "media";
-  if (hasPositioningFeature(style)) return "positioned";
-  if (hasTextFeature(element)) return "text";
-  if (hasLayoutFeature(style)) return "layout";
-  return "unknown";
-}
-function collectCssFacts(element) {
-  const style = window.getComputedStyle(element);
-  const facts = {
-    kind: pickKind(element, style),
-    base: [],
-    text: [],
-    media: [],
-    layout: [],
-    positioning: [],
-    hints: []
-  };
-  addFact(facts.base, "tag", element.tagName.toLowerCase());
-  addFact(facts.base, "display", style.getPropertyValue("display"));
-  addFact(facts.base, "position", style.getPropertyValue("position"));
-  addFact(facts.base, "visibility", style.getPropertyValue("visibility"));
-  addFactIfNot(facts.base, "opacity", style.getPropertyValue("opacity"), ["1"]);
-  addFactIfNot(facts.base, "transform", style.getPropertyValue("transform"), ["none"]);
-  const rectSize = getRectSize(element);
-  if (rectSize) addFact(facts.base, "rect-size", rectSize);
-  if (hasTextFeature(element)) {
-    addFactIfNot(facts.text, "font-size", style.getPropertyValue("font-size"), ["16px"]);
-    addFactIfNot(facts.text, "font-weight", style.getPropertyValue("font-weight"), ["400", "normal"]);
-    addFactIfNot(facts.text, "line-height", style.getPropertyValue("line-height"), ["normal"]);
-    addFactIfNot(facts.text, "letter-spacing", style.getPropertyValue("letter-spacing"), ["normal", "0px"]);
-    addFactIfNot(facts.text, "color", style.getPropertyValue("color"), ["rgb(0, 0, 0)"]);
-    addFactIfNot(facts.text, "text-align", style.getPropertyValue("text-align"), ["start", "left"]);
-  }
-  if (hasMediaFeature(element, style)) {
-    addFactIfNot(facts.media, "object-fit", style.getPropertyValue("object-fit"), ["fill"]);
-    addFactIfNot(facts.media, "object-position", style.getPropertyValue("object-position"), ["50% 50%"]);
-    addFactIfNot(facts.media, "aspect-ratio", style.getPropertyValue("aspect-ratio"), ["auto"]);
-    addFactIfNot(facts.media, "border-radius", style.getPropertyValue("border-radius"), ["0px"]);
-    const width = style.getPropertyValue("width").trim();
-    const height = style.getPropertyValue("height").trim();
-    if (width || height) addFact(facts.media, "css-size", `${width || "auto"} x ${height || "auto"}`);
-  }
-  if (hasLayoutFeature(style)) {
-    addFactIfNot(facts.layout, "gap", style.getPropertyValue("gap"), ["normal", "0px"]);
-    addFactIfNot(facts.layout, "row-gap", style.getPropertyValue("row-gap"), ["normal", "0px"]);
-    addFactIfNot(facts.layout, "column-gap", style.getPropertyValue("column-gap"), ["normal", "0px"]);
-    addFactIfNot(facts.layout, "padding", style.getPropertyValue("padding"), ["0", "0px", "0px 0px", "0px 0px 0px", "0px 0px 0px 0px"]);
-    addFactIfNot(facts.layout, "margin", style.getPropertyValue("margin"), ["0", "0px", "0px 0px", "0px 0px 0px", "0px 0px 0px 0px"]);
-    addFactIfNot(facts.layout, "align-items", style.getPropertyValue("align-items"), ["normal", "stretch"]);
-    addFactIfNot(facts.layout, "justify-content", style.getPropertyValue("justify-content"), ["normal", "start", "flex-start"]);
-  }
-  if (hasPositioningFeature(style) || hasOverlayHint(element, style)) {
-    addFactIfNot(facts.positioning, "top", style.getPropertyValue("top"), ["auto"]);
-    addFactIfNot(facts.positioning, "right", style.getPropertyValue("right"), ["auto"]);
-    addFactIfNot(facts.positioning, "bottom", style.getPropertyValue("bottom"), ["auto"]);
-    addFactIfNot(facts.positioning, "left", style.getPropertyValue("left"), ["auto"]);
-    addFactIfNot(facts.positioning, "inset", style.getPropertyValue("inset"), ["auto"]);
-    addFactIfNot(facts.positioning, "z-index", style.getPropertyValue("z-index"), ["auto"]);
-    addFactIfNot(facts.positioning, "transform", style.getPropertyValue("transform"), ["none"]);
-  }
-  const className = typeof element.className === "string" ? element.className.trim() : "";
-  if (className && OVERLAY_HINT_PATTERN.test(className)) {
-    addFact(facts.hints, "class-hint", className);
-  }
-  if (element.getAttribute("aria-hidden") === "true") {
-    facts.hints.push("aria-hidden: true");
-  }
-  return facts;
 }
 
 // src/content/visual-units.ts
@@ -3051,6 +3514,342 @@ function findVisualUnitsInBox(units, box) {
     }
   }
   return matches.sort((a, b) => b.score - a.score);
+}
+
+// src/content/intent-region.ts
+var ANCHOR_OVERLAP_EPSILON = 10;
+var nextRegionId = 1;
+function toDocumentRect2(viewportBox, scrollX, scrollY) {
+  const sx = scrollX ?? (typeof window !== "undefined" ? window.scrollX : 0);
+  const sy = scrollY ?? (typeof window !== "undefined" ? window.scrollY : 0);
+  return {
+    left: viewportBox.left + sx,
+    top: viewportBox.top + sy,
+    width: viewportBox.width,
+    height: viewportBox.height,
+    right: viewportBox.right + sx,
+    bottom: viewportBox.bottom + sy
+  };
+}
+function toRelativeRect(box, anchorRect) {
+  if (anchorRect.width === 0 || anchorRect.height === 0) {
+    return { ...box };
+  }
+  const leftPct = (box.left - anchorRect.left) / anchorRect.width * 100;
+  const topPct = (box.top - anchorRect.top) / anchorRect.height * 100;
+  const widthPct = box.width / anchorRect.width * 100;
+  const heightPct = box.height / anchorRect.height * 100;
+  return {
+    left: leftPct,
+    top: topPct,
+    width: widthPct,
+    height: heightPct,
+    right: leftPct + widthPct,
+    bottom: topPct + heightPct
+  };
+}
+function isVisibleAnchorCandidate(element) {
+  if (element.hasAttribute("hidden")) return false;
+  if (element.getAttribute("aria-hidden") === "true") return false;
+  const style = window.getComputedStyle(element);
+  if (style.display === "none") return false;
+  if (style.visibility === "hidden") return false;
+  if (parseFloat(style.opacity) < 0.01) return false;
+  return true;
+}
+function getAnchorPriority(element) {
+  if (element.classList.contains("active")) return 10;
+  if (element.getAttribute("aria-current") === "true") return 10;
+  if (element.getAttribute("data-active") === "true") return 10;
+  return 0;
+}
+function detectPageMode(root = document.body) {
+  if (typeof document === "undefined") return "unknown";
+  const strongSlideElements = root.querySelectorAll('[aria-roledescription="slide"], .slide, [data-slide]');
+  if (strongSlideElements.length > 0) {
+    return "slide";
+  }
+  const sections = root.querySelectorAll("section");
+  if (sections.length > 1) {
+    let slideLikeSections = 0;
+    const viewportHeight2 = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    for (let i = 0; i < sections.length; i++) {
+      const rect = sections[i].getBoundingClientRect();
+      if (rect.height >= viewportHeight2 * 0.8 && rect.width >= viewportWidth * 0.8) {
+        slideLikeSections++;
+      }
+    }
+    if (slideLikeSections > 1) {
+      return "slide";
+    }
+  }
+  const height = document.body.scrollHeight;
+  const viewportHeight = window.innerHeight;
+  if (height > viewportHeight * 1.5) {
+    return "long";
+  }
+  return "unknown";
+}
+function findRegionAnchor(box, root = document.body) {
+  const mode = detectPageMode(root);
+  if (mode === "slide") {
+    const slides = Array.from(root.querySelectorAll('[aria-roledescription="slide"], .slide, [data-slide]'));
+    let bestSlide = null;
+    let maxOverlap = 0;
+    let bestPriority = -1;
+    for (const slide of slides) {
+      if (!isVisibleAnchorCandidate(slide)) continue;
+      const rect = slide.getBoundingClientRect();
+      const { overlapArea } = calculateOverlap(rect, box);
+      const priority = getAnchorPriority(slide);
+      if (overlapArea > 0) {
+        const areaDiff = overlapArea - maxOverlap;
+        if (areaDiff > ANCHOR_OVERLAP_EPSILON) {
+          maxOverlap = overlapArea;
+          bestPriority = priority;
+          bestSlide = slide;
+        } else if (Math.abs(areaDiff) <= ANCHOR_OVERLAP_EPSILON && priority > bestPriority) {
+          maxOverlap = Math.max(maxOverlap, overlapArea);
+          bestPriority = priority;
+          bestSlide = slide;
+        }
+      }
+    }
+    if (bestSlide) {
+      const rect = bestSlide.getBoundingClientRect();
+      return {
+        kind: "slide",
+        locator: createElementLocator(bestSlide),
+        rect: {
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height,
+          right: rect.right,
+          bottom: rect.bottom
+        },
+        confidence: "high"
+      };
+    }
+  }
+  const containers = Array.from(root.querySelectorAll('section, article, main, [class*="container"], [class*="wrapper"]'));
+  let bestContainer = null;
+  let minArea = Infinity;
+  for (const container of containers) {
+    const rect = container.getBoundingClientRect();
+    const { overlapArea } = calculateOverlap(rect, box);
+    if (overlapArea > 0 && overlapArea / (box.width * box.height) > 0.8) {
+      const area = rect.width * rect.height;
+      if (area > 0 && area < minArea) {
+        minArea = area;
+        bestContainer = container;
+      }
+    }
+  }
+  if (bestContainer) {
+    const rect = bestContainer.getBoundingClientRect();
+    return {
+      kind: bestContainer.tagName.toLowerCase() === "section" ? "section" : "container",
+      locator: createElementLocator(bestContainer),
+      rect: {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+        right: rect.right,
+        bottom: rect.bottom
+      },
+      confidence: "medium"
+    };
+  }
+  return {
+    kind: "document",
+    confidence: "low"
+  };
+}
+function createIntentRegion(options) {
+  const root = options.root ?? document.body;
+  const pageMode = detectPageMode(root);
+  const documentBox = toDocumentRect2(options.viewportBox);
+  const anchor = findRegionAnchor(options.viewportBox, root);
+  let relativeBox;
+  if (anchor.rect) {
+    relativeBox = toRelativeRect(options.viewportBox, anchor.rect);
+  }
+  return {
+    id: `ir-${nextRegionId++}`,
+    action: options.action,
+    userIntent: options.userIntent,
+    pageMode,
+    viewportBox: options.viewportBox,
+    documentBox,
+    relativeBox,
+    anchor,
+    createdAt: Date.now(),
+    isGhostPreview: options.isGhostPreview
+  };
+}
+function getAnchorIdentity(anchor) {
+  if (anchor.locator?.descriptor) {
+    return `${anchor.kind}:${anchor.locator.descriptor}`;
+  }
+  if (anchor.kind === "document") {
+    return "document";
+  }
+  return null;
+}
+function compareRegionAnchors(source, target) {
+  const sourceId = getAnchorIdentity(source.anchor);
+  const targetId = getAnchorIdentity(target.anchor);
+  if (sourceId && targetId && sourceId === targetId) {
+    return {
+      shared: true,
+      differentSection: false,
+      confidence: source.anchor.confidence === "high" && target.anchor.confidence === "high" ? "high" : "medium"
+    };
+  }
+  if (source.anchor.kind === target.anchor.kind && source.anchor.kind !== "document") {
+    return {
+      shared: false,
+      differentSection: false,
+      confidence: "medium"
+    };
+  }
+  return {
+    shared: false,
+    differentSection: source.anchor.kind !== target.anchor.kind || Boolean(sourceId && targetId && sourceId !== targetId),
+    confidence: "low"
+  };
+}
+
+// src/content/css-facts.ts
+var MEDIA_TAGS = /* @__PURE__ */ new Set(["img", "svg", "canvas", "video"]);
+var TEXT_TAGS = /* @__PURE__ */ new Set(["p", "span", "a", "button", "label", "li", "td", "th", "h1", "h2", "h3", "h4", "h5", "h6"]);
+var OVERLAY_HINT_PATTERN = /(^|[-_\s])(mask|mosaic|overlay|badge|tooltip|popover|modal|floating|absolute)([-_\s]|$)/i;
+function addFact(facts, name, value) {
+  const normalized = (value ?? "").trim();
+  if (!normalized) return;
+  facts.push(`${name}: ${normalized}`);
+}
+function addFactIfNot(facts, name, value, ignored) {
+  const normalized = (value ?? "").trim();
+  if (!normalized || ignored.includes(normalized)) return;
+  addFact(facts, name, normalized);
+}
+function isIgnoredValue(value, ignored) {
+  return ignored.includes(value);
+}
+function hasTextFeature(element) {
+  const tagName = element.tagName.toLowerCase();
+  return TEXT_TAGS.has(tagName) || (element.textContent ?? "").trim().length > 0;
+}
+function hasMediaFeature(element, style) {
+  const tagName = element.tagName.toLowerCase();
+  if (MEDIA_TAGS.has(tagName)) return true;
+  const objectFit = style.getPropertyValue("object-fit").trim();
+  const objectPosition = style.getPropertyValue("object-position").trim();
+  return Boolean(
+    objectFit && objectFit !== "fill" || objectPosition && objectPosition !== "50% 50%"
+  );
+}
+function hasLayoutFeature(style) {
+  const display = style.getPropertyValue("display").trim();
+  const hasNonDefault = (name, ignored) => {
+    const value = style.getPropertyValue(name).trim();
+    return Boolean(value && !isIgnoredValue(value, ignored));
+  };
+  return display === "flex" || display === "grid" || hasNonDefault("gap", ["normal", "0px"]) || hasNonDefault("row-gap", ["normal", "0px"]) || hasNonDefault("column-gap", ["normal", "0px"]) || hasNonDefault("padding", ["0", "0px", "0px 0px", "0px 0px 0px", "0px 0px 0px 0px"]) || hasNonDefault("margin", ["0", "0px", "0px 0px", "0px 0px 0px", "0px 0px 0px 0px"]) || hasNonDefault("align-items", ["normal", "stretch"]) || hasNonDefault("justify-content", ["normal", "start", "flex-start"]);
+}
+function hasPositioningFeature(style) {
+  const position = style.getPropertyValue("position").trim();
+  const transform = style.getPropertyValue("transform").trim();
+  const zIndex = style.getPropertyValue("z-index").trim();
+  return Boolean(position && position !== "static") || Boolean(transform && transform !== "none") || Boolean(zIndex && zIndex !== "auto");
+}
+function hasOverlayHint(element, style) {
+  const hintText = [element.className, element.id, element.getAttribute("role")].join(" ");
+  if (OVERLAY_HINT_PATTERN.test(hintText)) return true;
+  if (element.getAttribute("aria-hidden") === "true" && hasPositioningFeature(style)) return true;
+  return false;
+}
+function getRectSize(element) {
+  const rect = element.getBoundingClientRect();
+  const width = Math.round(rect.width);
+  const height = Math.round(rect.height);
+  if (width <= 0 && height <= 0) return null;
+  return `${width} x ${height}`;
+}
+function pickKind(element, style) {
+  if (hasOverlayHint(element, style)) return "overlay";
+  if (hasMediaFeature(element, style)) return "media";
+  if (hasPositioningFeature(style)) return "positioned";
+  if (hasTextFeature(element)) return "text";
+  if (hasLayoutFeature(style)) return "layout";
+  return "unknown";
+}
+function collectCssFacts(element) {
+  const style = window.getComputedStyle(element);
+  const facts = {
+    kind: pickKind(element, style),
+    base: [],
+    text: [],
+    media: [],
+    layout: [],
+    positioning: [],
+    hints: []
+  };
+  addFact(facts.base, "tag", element.tagName.toLowerCase());
+  addFact(facts.base, "display", style.getPropertyValue("display"));
+  addFact(facts.base, "position", style.getPropertyValue("position"));
+  addFact(facts.base, "visibility", style.getPropertyValue("visibility"));
+  addFactIfNot(facts.base, "opacity", style.getPropertyValue("opacity"), ["1"]);
+  addFactIfNot(facts.base, "transform", style.getPropertyValue("transform"), ["none"]);
+  const rectSize = getRectSize(element);
+  if (rectSize) addFact(facts.base, "rect-size", rectSize);
+  if (hasTextFeature(element)) {
+    addFactIfNot(facts.text, "font-size", style.getPropertyValue("font-size"), ["16px"]);
+    addFactIfNot(facts.text, "font-weight", style.getPropertyValue("font-weight"), ["400", "normal"]);
+    addFactIfNot(facts.text, "line-height", style.getPropertyValue("line-height"), ["normal"]);
+    addFactIfNot(facts.text, "letter-spacing", style.getPropertyValue("letter-spacing"), ["normal", "0px"]);
+    addFactIfNot(facts.text, "color", style.getPropertyValue("color"), ["rgb(0, 0, 0)"]);
+    addFactIfNot(facts.text, "text-align", style.getPropertyValue("text-align"), ["start", "left"]);
+  }
+  if (hasMediaFeature(element, style)) {
+    addFactIfNot(facts.media, "object-fit", style.getPropertyValue("object-fit"), ["fill"]);
+    addFactIfNot(facts.media, "object-position", style.getPropertyValue("object-position"), ["50% 50%"]);
+    addFactIfNot(facts.media, "aspect-ratio", style.getPropertyValue("aspect-ratio"), ["auto"]);
+    addFactIfNot(facts.media, "border-radius", style.getPropertyValue("border-radius"), ["0px"]);
+    const width = style.getPropertyValue("width").trim();
+    const height = style.getPropertyValue("height").trim();
+    if (width || height) addFact(facts.media, "css-size", `${width || "auto"} x ${height || "auto"}`);
+  }
+  if (hasLayoutFeature(style)) {
+    addFactIfNot(facts.layout, "gap", style.getPropertyValue("gap"), ["normal", "0px"]);
+    addFactIfNot(facts.layout, "row-gap", style.getPropertyValue("row-gap"), ["normal", "0px"]);
+    addFactIfNot(facts.layout, "column-gap", style.getPropertyValue("column-gap"), ["normal", "0px"]);
+    addFactIfNot(facts.layout, "padding", style.getPropertyValue("padding"), ["0", "0px", "0px 0px", "0px 0px 0px", "0px 0px 0px 0px"]);
+    addFactIfNot(facts.layout, "margin", style.getPropertyValue("margin"), ["0", "0px", "0px 0px", "0px 0px 0px", "0px 0px 0px 0px"]);
+    addFactIfNot(facts.layout, "align-items", style.getPropertyValue("align-items"), ["normal", "stretch"]);
+    addFactIfNot(facts.layout, "justify-content", style.getPropertyValue("justify-content"), ["normal", "start", "flex-start"]);
+  }
+  if (hasPositioningFeature(style) || hasOverlayHint(element, style)) {
+    addFactIfNot(facts.positioning, "top", style.getPropertyValue("top"), ["auto"]);
+    addFactIfNot(facts.positioning, "right", style.getPropertyValue("right"), ["auto"]);
+    addFactIfNot(facts.positioning, "bottom", style.getPropertyValue("bottom"), ["auto"]);
+    addFactIfNot(facts.positioning, "left", style.getPropertyValue("left"), ["auto"]);
+    addFactIfNot(facts.positioning, "inset", style.getPropertyValue("inset"), ["auto"]);
+    addFactIfNot(facts.positioning, "z-index", style.getPropertyValue("z-index"), ["auto"]);
+    addFactIfNot(facts.positioning, "transform", style.getPropertyValue("transform"), ["none"]);
+  }
+  const className = typeof element.className === "string" ? element.className.trim() : "";
+  if (className && OVERLAY_HINT_PATTERN.test(className)) {
+    addFact(facts.hints, "class-hint", className);
+  }
+  if (element.getAttribute("aria-hidden") === "true") {
+    facts.hints.push("aria-hidden: true");
+  }
+  return facts;
 }
 
 // src/content/region-context.ts
@@ -3311,12 +4110,12 @@ function t(language, en, zh) {
   return isZh(language) ? zh : en;
 }
 function formatRect(rect) {
-  return `[x:${Math.round(rect.left)}, y:${Math.round(rect.top)}, w:${Math.round(rect.width)}, h:${Math.round(rect.height)}]`;
+  return `l:${Math.round(rect.left)} t:${Math.round(rect.top)} w:${Math.round(rect.width)} h:${Math.round(rect.height)}`;
 }
 function formatAnchor(context) {
-  const { anchor } = context.region;
-  const descriptor = anchor.locator?.descriptor ? ` (${anchor.locator.descriptor})` : "";
-  return `${anchor.kind}${descriptor}; confidence: ${anchor.confidence}`;
+  const kind = context.region.anchor.kind;
+  const locator = context.region.anchor.locator;
+  return locator?.descriptor ? `${kind} (${locator.descriptor})` : kind;
 }
 function formatBox(context) {
   const { region } = context;
@@ -3399,6 +4198,54 @@ function appendSourceImplementationHint(lines, context, language) {
   lines.push(t(language, "Source implementation hint:", "Source A \u5B9E\u73B0\u63D0\u793A:"));
   lines.push(t(language, "- Source A contains multiple sibling items; prefer moving their shared row/wrapper container when that preserves the selected visual group.", "- Source A \u5305\u542B\u591A\u4E2A\u540C\u7EA7\u9879\uFF1B\u5982\u679C\u80FD\u4FDD\u7559\u5F53\u524D\u89C6\u89C9\u5206\u7EC4\uFF0C\u5E94\u4F18\u5148\u79FB\u52A8\u5B83\u4EEC\u5171\u4EAB\u7684\u6574\u884C\u6216\u5916\u5C42\u5BB9\u5668\u3002"));
   lines.push(t(language, "- Exclude nearby labels/headings outside Source A's visual box, even when they share a parent container.", "- \u5373\u4F7F\u4E0E Source A \u5171\u7528\u7236\u5BB9\u5668\uFF0C\u4E5F\u4E0D\u8981\u628A\u89C6\u89C9\u6846\u5916\u7684\u90BB\u8FD1\u6807\u7B7E\u6216\u6807\u9898\u4E00\u8D77\u7EB3\u5165\u79FB\u52A8\u8303\u56F4\u3002"));
+  lines.push("");
+}
+function describePrimaryObject(context, language) {
+  const candidate = context.candidates[0];
+  if (!candidate) {
+    return t(language, "No strong primary object detected; treat Source A as the selected visual group only.", "\u672A\u68C0\u6D4B\u5230\u5F3A\u4E3B\u5BF9\u8C61\uFF1B\u5C06 Source A \u89C6\u4E3A\u5F53\u524D\u9009\u4E2D\u7684\u6574\u4F53\u89C6\u89C9\u5206\u7EC4\u3002");
+  }
+  const summary = summarizeVisualUnit(candidate.unit);
+  const kind = candidate.unit.kind;
+  if (kind === "image") {
+    return t(language, `Most likely primary object: image block ${summary}.`, `\u6700\u53EF\u80FD\u7684\u4E3B\u5BF9\u8C61\uFF1A\u56FE\u7247\u5757 ${summary}\u3002`);
+  }
+  if (kind === "video") {
+    return t(language, `Most likely primary object: video block ${summary}.`, `\u6700\u53EF\u80FD\u7684\u4E3B\u5BF9\u8C61\uFF1A\u89C6\u9891\u5757 ${summary}\u3002`);
+  }
+  if (kind === "interactive") {
+    return t(language, `Most likely primary object: interactive control ${summary}.`, `\u6700\u53EF\u80FD\u7684\u4E3B\u5BF9\u8C61\uFF1A\u4EA4\u4E92\u63A7\u4EF6 ${summary}\u3002`);
+  }
+  if (kind === "textLine" || kind === "textBlock") {
+    return t(language, `Most likely primary object: text content ${summary}.`, `\u6700\u53EF\u80FD\u7684\u4E3B\u5BF9\u8C61\uFF1A\u6587\u672C\u5185\u5BB9 ${summary}\u3002`);
+  }
+  return t(language, `Most likely primary object: visual block ${summary}.`, `\u6700\u53EF\u80FD\u7684\u4E3B\u5BF9\u8C61\uFF1A\u89C6\u89C9\u5757 ${summary}\u3002`);
+}
+function appendSourceSemanticSummary(lines, context, language) {
+  lines.push(t(language, "Source A summary:", "Source A \u6458\u8981:"));
+  lines.push(t(language, "- Source A is the selected visual content group inside the drawn Source A box.", "- Source A \u662F Source A \u89C6\u89C9\u6846\u5185\u88AB\u9009\u4E2D\u7684\u6574\u4F53\u5185\u5BB9\u7EC4\u3002"));
+  lines.push(`- ${describePrimaryObject(context, language)}`);
+  if (hasMultipleSiblingCandidates(context)) {
+    lines.push(t(language, "- Group wrapper hint: if multiple sibling items are selected together, prefer moving their shared wrapper/container instead of splitting them into separate span-level edits.", "- \u5171\u540C\u5916\u5C42\u63D0\u793A\uFF1A\u5982\u679C\u540C\u65F6\u9009\u4E2D\u4E86\u591A\u4E2A\u540C\u7EA7\u9879\uFF0C\u5E94\u4F18\u5148\u79FB\u52A8\u5B83\u4EEC\u5171\u4EAB\u7684 wrapper / container\uFF0C\u800C\u4E0D\u662F\u62C6\u6210\u591A\u4E2A span \u7EA7\u522B\u7684\u5C0F\u6539\u52A8\u3002"));
+  } else {
+    lines.push(t(language, "- Group wrapper hint: no stronger shared wrapper signal was detected beyond the selected visual group.", "- \u5171\u540C\u5916\u5C42\u63D0\u793A\uFF1A\u9664\u5F53\u524D\u9009\u4E2D\u7684\u89C6\u89C9\u5206\u7EC4\u5916\uFF0C\u6682\u672A\u68C0\u6D4B\u5230\u66F4\u5F3A\u7684\u5171\u4EAB wrapper \u4FE1\u53F7\u3002"));
+  }
+  lines.push(t(language, "- Surrounding context: nearby headings, labels, and parent-container text outside Source A's visual box are reference only unless they overlap Source A or the user explicitly says to move them together.", "- \u5468\u8FB9\u4E0A\u4E0B\u6587\uFF1ASource A \u89C6\u89C9\u6846\u5916\u7684\u90BB\u8FD1\u6807\u9898\u3001\u6807\u7B7E\u548C\u7236\u5BB9\u5668\u6587\u672C\u9ED8\u8BA4\u53EA\u662F\u53C2\u8003\uFF0C\u9664\u975E\u5B83\u4EEC\u4E0E Source A \u91CD\u53E0\uFF0C\u6216\u7528\u6237\u660E\u786E\u8981\u6C42\u4E00\u8D77\u79FB\u52A8\u3002"));
+  lines.push("");
+}
+function appendTargetSemanticSummary(lines, context, language) {
+  lines.push(t(language, "Target B summary:", "Target B \u6458\u8981:"));
+  if (context.empty) {
+    lines.push(t(language, "- Target B is an empty placement area / destination guide, not an existing content target.", "- Target B \u662F\u7A7A\u767D\u653E\u7F6E\u533A\u57DF / \u843D\u70B9\u53C2\u8003\uFF0C\u4E0D\u662F\u5DF2\u6709\u5185\u5BB9\u76EE\u6807\u3002"));
+    lines.push(t(language, "- Existing content handling: none detected inside Target B; do not infer replacement from this empty area.", "- \u73B0\u6709\u5185\u5BB9\u5904\u7406\uFF1ATarget B \u5185\u672A\u68C0\u6D4B\u5230\u73B0\u6709\u5185\u5BB9\uFF0C\u4E0D\u8981\u628A\u8FD9\u5757\u7A7A\u767D\u533A\u57DF\u7406\u89E3\u4E3A\u66FF\u6362\u5BF9\u8C61\u3002"));
+    lines.push("");
+    return;
+  }
+  const primary = context.candidates[0];
+  const summary = primary ? summarizeVisualUnit(primary.unit) : t(language, "existing content", "\u73B0\u6709\u5185\u5BB9");
+  lines.push(t(language, `- Target B is a destination guide that currently overlaps or sits near existing content such as ${summary}.`, `- Target B \u662F\u4E00\u4E2A\u843D\u70B9\u53C2\u8003\u533A\u57DF\uFF0C\u76EE\u524D\u4E0E ${summary} \u7B49\u73B0\u6709\u5185\u5BB9\u76F8\u90BB\u6216\u53D1\u751F\u8986\u76D6\u3002`));
+  lines.push(t(language, `- Existing content handling: treat ${summary} as visual context first, not as a replacement target by default.`, `- \u73B0\u6709\u5185\u5BB9\u5904\u7406\uFF1A\u5E94\u5148\u5C06 ${summary} \u89C6\u4E3A\u89C6\u89C9\u4E0A\u4E0B\u6587\uFF0C\u9ED8\u8BA4\u4E0D\u8981\u628A\u5B83\u5F53\u6210\u66FF\u6362\u76EE\u6807\u3002`));
+  lines.push(t(language, `- Potential blocking content: if ${summary} would physically block the moved result, resolve that overlap locally; otherwise keep it as surrounding context.`, `- \u53EF\u80FD\u7684\u963B\u6321\u5185\u5BB9\uFF1A\u5982\u679C ${summary} \u4F1A\u7269\u7406\u963B\u6321\u79FB\u52A8\u7ED3\u679C\uFF0C\u518D\u5C40\u90E8\u5904\u7406\u91CD\u53E0\uFF1B\u5426\u5219\u5E94\u7EE7\u7EED\u628A\u5B83\u89C6\u4E3A\u5468\u8FB9\u4E0A\u4E0B\u6587\u3002`));
   lines.push("");
 }
 function formatOffsetAmount(value, unit) {
@@ -3500,39 +4347,158 @@ function formatGuideConstraintLocalized(axis, guide, language) {
   if (!isZh(language)) return formatGuideConstraint(axis, guide);
   return `- ${axis} \u8F74\uFF1A\u4F7F\u7528\u5DF2\u8BB0\u5F55\u53C2\u8003\u7EBF\uFF0CTarget B \u7684${formatAlignmentEdge(guide.targetEdge)}\u4E0E ${quoteReference(guide.unitSummary)} \u7684${formatAlignmentEdge(guide.sourceEdge)}\u5BF9\u9F50\u3002`;
 }
-function appendPrimaryAxisConstraints(lines, targetContext, language) {
+function getAnchorCenterHint(targetContext, axis) {
+  const hints = targetContext.alignmentHints ?? [];
+  const needle = axis === "x" ? "Center X is close to anchor center X" : "Center Y is close to anchor center Y";
+  const hint = hints.find((candidate) => candidate.summary.includes(needle));
+  if (!hint) return null;
+  return { confidence: hint.confidence };
+}
+function getPlacementOffsetConstraint(sourceContext, targetContext, axis, language) {
+  const useRelative = Boolean(sourceContext.region.relativeBox && targetContext.region.relativeBox);
+  const sourceBox = sourceContext.region.relativeBox ?? sourceContext.region.viewportBox;
+  const targetBox = targetContext.region.relativeBox ?? targetContext.region.viewportBox;
+  const unit = useRelative ? "%" : "px";
+  if (axis === "x") {
+    const delta2 = targetBox.left - sourceBox.left;
+    const direction2 = delta2 >= 0 ? isZh(language) ? "\u53F3\u4FA7" : "to the right of" : isZh(language) ? "\u5DE6\u4FA7" : "to the left of";
+    return {
+      axis,
+      confidence: "low",
+      relationType: "gap",
+      source: "placement-offset",
+      text: isZh(language) ? `- X \u8F74\uFF1A\u5C06 Source A \u4FDD\u6301\u5728 Source A \u5DE6\u8FB9\u754C${direction2}\uFF0C\u504F\u79FB\u7EA6 ${Math.round(Math.abs(delta2))}${unit}\u3002` : `- X axis: use placement offset; Target B left edge is about ${Math.round(Math.abs(delta2))}${unit} ${direction2} Source A left edge.`
+    };
+  }
+  const delta = targetBox.top - sourceBox.top;
+  const direction = delta >= 0 ? isZh(language) ? "\u4E0B\u65B9" : "below" : isZh(language) ? "\u4E0A\u65B9" : "above";
+  return {
+    axis,
+    confidence: "low",
+    relationType: "gap",
+    source: "placement-offset",
+    text: isZh(language) ? `- Y \u8F74\uFF1A\u5C06 Source A \u4FDD\u6301\u5728 Source A \u4E0A\u8FB9\u754C${direction}\uFF0C\u504F\u79FB\u7EA6 ${Math.round(Math.abs(delta))}${unit}\u3002` : `- Y axis: use placement offset; Target B top edge is about ${Math.round(Math.abs(delta))}${unit} ${direction} Source A top edge.`
+  };
+}
+function resolveAxisConstraint(sourceContext, targetContext, axis, language) {
   const guides = targetContext.activeAlignmentGuides ?? [];
-  const xGuide = guides.find((guide) => guide.axis === "x");
-  const yGuide = guides.find((guide) => guide.axis === "y");
-  const left = pickReference(targetContext, "left");
-  const right = pickReference(targetContext, "right");
-  const below = pickReference(targetContext, "below");
-  const above = pickReference(targetContext, "above");
+  const guide = guides.find((candidate) => candidate.axis === axis);
+  if (guide) {
+    const isCenter = guide.targetEdge === "centerX" || guide.targetEdge === "centerY";
+    return {
+      axis,
+      confidence: "high",
+      relationType: isCenter ? "centered" : "align",
+      source: "active-guide",
+      text: formatGuideConstraintLocalized(axis === "x" ? "X" : "Y", guide, language)
+    };
+  }
+  if (axis === "x") {
+    const left = pickReference(targetContext, "left");
+    const right = pickReference(targetContext, "right");
+    const reference = left ?? right;
+    if (reference) {
+      return {
+        axis,
+        confidence: "medium",
+        relationType: reference.distance <= 16 ? "adjacent" : "gap",
+        source: "nearby",
+        text: formatXConstraintLocalized(reference, language)
+      };
+    }
+  } else {
+    const below = pickReference(targetContext, "below");
+    const above = pickReference(targetContext, "above");
+    const reference = below ?? above;
+    if (reference) {
+      return {
+        axis,
+        confidence: "medium",
+        relationType: reference.distance <= 16 ? "adjacent" : "gap",
+        source: "nearby",
+        text: formatYConstraintLocalized(reference, language)
+      };
+    }
+  }
+  const anchorCenter = getAnchorCenterHint(targetContext, axis);
+  if (anchorCenter) {
+    return {
+      axis,
+      confidence: anchorCenter.confidence,
+      relationType: "centered",
+      source: "anchor-center",
+      text: axis === "x" ? t(language, "- X axis: center Source A within the shared anchor/container.", "- X \u8F74\uFF1A\u5C06 Source A \u5728\u5171\u4EAB anchor / \u5BB9\u5668\u5185\u6C34\u5E73\u5C45\u4E2D\u3002") : t(language, "- Y axis: center Source A within the shared anchor/container.", "- Y \u8F74\uFF1A\u5C06 Source A \u5728\u5171\u4EAB anchor / \u5BB9\u5668\u5185\u5782\u76F4\u5C45\u4E2D\u3002")
+    };
+  }
+  return getPlacementOffsetConstraint(sourceContext, targetContext, axis, language);
+}
+function appendPrimaryAxisConstraints(lines, sourceContext, targetContext, language) {
+  const xConstraint = resolveAxisConstraint(sourceContext, targetContext, "x", language);
+  const yConstraint = resolveAxisConstraint(sourceContext, targetContext, "y", language);
   lines.push(t(language, "Primary axis constraints:", "\u4E3B\u8F74\u7EA6\u675F:"));
-  if (left) {
-    lines.push(formatXConstraintLocalized(left, language));
-  } else if (right) {
-    lines.push(formatXConstraintLocalized(right, language));
-  } else if (xGuide) {
-    lines.push(formatGuideConstraintLocalized("X", xGuide, language));
+  lines.push(xConstraint.text);
+  lines.push(yConstraint.text);
+  lines.push("");
+  return [xConstraint, yConstraint];
+}
+function appendSecondaryReferences(lines, targetContext, primary, language) {
+  const guides = targetContext.activeAlignmentGuides ?? [];
+  const primaryGuideAxes = new Set(primary.filter((constraint) => constraint.source === "active-guide").map((constraint) => constraint.axis));
+  const secondaryGuideLines = guides.filter((guide) => !primaryGuideAxes.has(guide.axis)).slice(0, 2).map((guide) => isZh(language) ? `- Target B \u7684${formatAlignmentEdge(guide.targetEdge)}\u4E0E ${quoteReference(guide.unitSummary)} \u7684${formatAlignmentEdge(guide.sourceEdge)}\u5BF9\u9F50\uFF08delta: ${Math.round(guide.deltaPx)}px\uFF0Cconfidence: ${guide.confidence}\uFF09\u3002` : `- Target B ${formatAlignmentEdge(guide.targetEdge)} aligns with ${quoteReference(guide.unitSummary)} ${formatAlignmentEdge(guide.sourceEdge)} (delta: ${Math.round(guide.deltaPx)}px, confidence: ${guide.confidence}).`);
+  const nearbyLines = targetContext.nearby.filter((reference) => {
+    if ((reference.direction === "left" || reference.direction === "right") && primary.some((constraint) => constraint.axis === "x" && constraint.source === "nearby")) {
+      return false;
+    }
+    if ((reference.direction === "above" || reference.direction === "below") && primary.some((constraint) => constraint.axis === "y" && constraint.source === "nearby")) {
+      return false;
+    }
+    return true;
+  }).slice(0, 2).map((reference) => isZh(language) ? `- ${formatDirection(reference.direction, language)}\uFF1A${reference.summary}\uFF0C\u8DDD\u79BB ${Math.round(reference.distance)}px\uFF08confidence: medium\uFF09\u3002` : `- ${reference.direction}: ${reference.summary}, ${Math.round(reference.distance)}px away (confidence: medium).`);
+  if (secondaryGuideLines.length === 0 && nearbyLines.length === 0) {
+    lines.push(t(language, "Secondary references:", "\u6B21\u7EA7\u53C2\u8003:"));
+    lines.push(t(language, "- None beyond the primary constraints.", "- \u9664\u4E3B\u7EA6\u675F\u5916\u6CA1\u6709\u989D\u5916\u6B21\u7EA7\u53C2\u8003\u3002"));
+    lines.push("");
+    return;
+  }
+  lines.push(t(language, "Secondary references:", "\u6B21\u7EA7\u53C2\u8003:"));
+  secondaryGuideLines.forEach((line) => lines.push(line));
+  nearbyLines.forEach((line) => lines.push(line));
+  lines.push("");
+}
+function detectRelationTypes(sourceContext, targetContext, constraints, language) {
+  const types = /* @__PURE__ */ new Set();
+  constraints.forEach((constraint) => types.add(constraint.relationType));
+  if (compareRegionAnchors(sourceContext.region, targetContext.region).shared) {
+    types.add("inside");
+  }
+  const ordered = ["align", "gap", "adjacent", "inside", "centered"].filter((type) => types.has(type));
+  return isZh(language) ? ordered.join("\u3001") : ordered.join(", ");
+}
+function appendAnchorAndCoordinateModel(lines, sourceContext, targetContext, language) {
+  const relation = compareRegionAnchors(sourceContext.region, targetContext.region);
+  lines.push(t(language, "Anchor and coordinate model:", "Anchor \u4E0E\u5750\u6807\u7CFB:"));
+  if (relation.shared) {
+    lines.push(t(language, `- Source A and Target B share the same ${sourceContext.region.anchor.kind} anchor. Use this shared anchor coordinate system as the primary placement frame.`, `- Source A \u4E0E Target B \u5171\u4EAB\u540C\u4E00\u4E2A ${sourceContext.region.anchor.kind} anchor\uFF0C\u5E94\u4F18\u5148\u4F7F\u7528\u8FD9\u4E2A\u5171\u4EAB\u5750\u6807\u7CFB\u5224\u65AD\u4F4D\u7F6E\u3002`));
   } else {
-    lines.push(t(language, "- X axis: use Placement offset and Target B visual box as the primary horizontal constraint.", "- X \u8F74\uFF1A\u4F7F\u7528\u300C\u653E\u7F6E\u504F\u79FB\u300D\u548C Target B \u89C6\u89C9\u6846\u4F5C\u4E3A\u4E3B\u8981\u6A2A\u5411\u7EA6\u675F\u3002"));
+    lines.push(t(language, "- Target B appears in a different anchor/section.", "- Target B \u770B\u8D77\u6765\u4F4D\u4E8E\u4E0D\u540C\u7684 anchor / section \u4E2D\u3002"));
+    lines.push(t(language, `- Treat placement across anchors as lower confidence. Source anchor: ${formatAnchor(sourceContext)}. Target anchor: ${formatAnchor(targetContext)}.`, `- \u8DE8 anchor \u7684\u653E\u7F6E\u5173\u7CFB\u5E94\u964D\u4F4E\u7F6E\u4FE1\u5EA6\u3002Source anchor\uFF1A${formatAnchor(sourceContext)}\uFF1BTarget anchor\uFF1A${formatAnchor(targetContext)}\u3002`));
   }
-  if (below) {
-    lines.push(formatYConstraintLocalized(below, language));
-  } else if (above) {
-    lines.push(formatYConstraintLocalized(above, language));
-  } else if (yGuide) {
-    lines.push(formatGuideConstraintLocalized("Y", yGuide, language));
-  } else {
-    lines.push(t(language, "- Y axis: use Placement offset and Target B visual box as the primary vertical constraint.", "- Y \u8F74\uFF1A\u4F7F\u7528\u300C\u653E\u7F6E\u504F\u79FB\u300D\u548C Target B \u89C6\u89C9\u6846\u4F5C\u4E3A\u4E3B\u8981\u7EB5\u5411\u7EA6\u675F\u3002"));
+  if (targetContext.region.relativeBox) {
+    lines.push(t(language, `- Relative box: ${formatRect(targetContext.region.relativeBox)} relative to target anchor.`, `- \u76F8\u5BF9\u6846\uFF1A${formatRect(targetContext.region.relativeBox)}\uFF08\u76F8\u5BF9\u4E8E Target anchor\uFF09\u3002`));
   }
-  if (guides.length > 0) {
-    lines.push(t(language, "Secondary alignment guides:", "\u6B21\u7EA7\u5BF9\u9F50\u53C2\u8003\u7EBF:"));
-    guides.slice(0, 2).forEach((guide) => {
-      lines.push(isZh(language) ? `- Target B \u7684${formatAlignmentEdge(guide.targetEdge)}\u4E0E ${quoteReference(guide.unitSummary)} \u7684${formatAlignmentEdge(guide.sourceEdge)}\u5BF9\u9F50\uFF08delta: ${Math.round(guide.deltaPx)}px\uFF09\u3002` : `- Target B ${formatAlignmentEdge(guide.targetEdge)} aligns with ${quoteReference(guide.unitSummary)} ${formatAlignmentEdge(guide.sourceEdge)} (delta: ${Math.round(guide.deltaPx)}px).`);
-    });
+  lines.push(t(language, `- Viewport box fallback: ${formatRect(targetContext.region.viewportBox)}.`, `- \u89C6\u53E3\u5750\u6807\u56DE\u9000\uFF1A${formatRect(targetContext.region.viewportBox)}\u3002`));
+  if (targetContext.region.documentBox) {
+    lines.push(t(language, `- Document box fallback: ${formatRect(targetContext.region.documentBox)}.`, `- \u6587\u6863\u5750\u6807\u56DE\u9000\uFF1A${formatRect(targetContext.region.documentBox)}\u3002`));
   }
+  lines.push("");
+}
+function appendConfidenceNotes(lines, sourceContext, targetContext, primary, language) {
+  const relation = compareRegionAnchors(sourceContext.region, targetContext.region);
+  lines.push(t(language, "Confidence notes:", "\u7F6E\u4FE1\u5EA6\u8BF4\u660E:"));
+  primary.forEach((constraint) => {
+    lines.push(isZh(language) ? `- ${constraint.axis.toUpperCase()} \u8F74\u4E3B\u7EA6\u675F\uFF1A${constraint.confidence}\uFF08\u6765\u6E90\uFF1A${constraint.source}\uFF09\u3002` : `- ${constraint.axis.toUpperCase()} axis primary constraint: ${constraint.confidence} confidence (source: ${constraint.source}).`);
+  });
+  lines.push(relation.shared ? t(language, `- Anchor relation: ${relation.confidence} confidence shared anchor.`, `- Anchor \u5173\u7CFB\uFF1A\u5171\u4EAB anchor\uFF0C\u7F6E\u4FE1\u5EA6 ${relation.confidence}\u3002`) : t(language, `- Anchor relation: ${relation.confidence} confidence because Source A and Target B use different anchors/sections.`, `- Anchor \u5173\u7CFB\uFF1ASource A \u4E0E Target B \u4F7F\u7528\u4E0D\u540C anchor / section\uFF0C\u56E0\u6B64\u7F6E\u4FE1\u5EA6\u4E3A ${relation.confidence}\u3002`));
   lines.push("");
 }
 function formatAlignmentEdge(edge) {
@@ -3613,8 +4579,8 @@ function appendMoveOperation(lines, input, opId, skipExpectedResult = false) {
   appendContextBlock(lines, t(language, "Source A", "Source A"), sourceContext, "", language);
   appendRegionContents(lines, sourceContext, "", false, language);
   appendCssFacts(lines, sourceContext, "", language);
+  appendSourceSemanticSummary(lines, sourceContext, language);
   appendSourceImplementationHint(lines, sourceContext, language);
-  lines.push("");
   lines.push(t(language, "Placement summary:", "\u653E\u7F6E\u6458\u8981:"));
   lines.push(t(language, "- Treat Source A as the selected visual content group inside Source A's visual box, not as individual child spans or text fragments.", "- \u5C06 Source A \u89C6\u4E3A\u89C6\u89C9\u6846\u5185\u88AB\u9009\u4E2D\u7684\u6574\u4F53\u5185\u5BB9\u7EC4\uFF0C\u800C\u4E0D\u662F\u82E5\u5E72\u72EC\u7ACB\u5B50 span \u6216\u96F6\u6563\u6587\u672C\u7247\u6BB5\u3002"));
   lines.push(t(language, "- Do not include nearby labels, headings, or parent-container text unless they overlap Source A or are explicitly listed in Source A Region contents.", "- \u4E0D\u8981\u628A Source A \u89C6\u89C9\u6846\u5916\u7684\u90BB\u8FD1\u6807\u7B7E\u3001\u6807\u9898\u6216\u7236\u5BB9\u5668\u6587\u672C\u7EB3\u5165\u79FB\u52A8\u8303\u56F4\uFF0C\u9664\u975E\u5B83\u4EEC\u4E0E Source A \u53D1\u751F\u91CD\u53E0\uFF0C\u6216\u5DF2\u660E\u786E\u5217\u5728 Source A \u7684\u533A\u57DF\u5185\u5BB9\u4E2D\u3002"));
@@ -3641,8 +4607,14 @@ function appendMoveOperation(lines, input, opId, skipExpectedResult = false) {
   }
   lines.push("");
   appendPlacementOffset(lines, sourceContext, targetContext, language);
-  appendPrimaryAxisConstraints(lines, targetContext, language);
+  appendAnchorAndCoordinateModel(lines, sourceContext, targetContext, language);
+  const primaryConstraints = appendPrimaryAxisConstraints(lines, sourceContext, targetContext, language);
+  lines.push(`${t(language, "Relation types", "\u5173\u7CFB\u7C7B\u578B")}: ${detectRelationTypes(sourceContext, targetContext, primaryConstraints, language)}`);
+  lines.push("");
+  appendSecondaryReferences(lines, targetContext, primaryConstraints, language);
+  appendConfidenceNotes(lines, sourceContext, targetContext, primaryConstraints, language);
   appendContextBlock(lines, t(language, "Target B", "Target B"), targetContext, "", language);
+  appendTargetSemanticSummary(lines, targetContext, language);
   lines.push(t(language, "Target B placement reference:", "Target B \u653E\u7F6E\u53C2\u8003:"));
   if (targetContext.region.isGhostPreview) {
     lines.push(t(language, "- Target B source: dragged target box.", "- Target B \u6765\u6E90\uFF1A\u62D6\u62FD\u5F97\u5230\u7684\u76EE\u6807\u6846\u3002"));
@@ -3996,6 +4968,7 @@ function getLocalHtmlSnippet(el) {
     if (isClickDeckUiElement(clone)) return null;
     let outerHTML = clone.outerHTML;
     outerHTML = outerHTML.replace(/src="data:[^"]+"/g, 'src="[data URL hidden]"');
+    outerHTML = outerHTML.replace(/srcdoc="[^"]*"/g, 'srcdoc="[srcdoc hidden]"');
     const lines = outerHTML.split("\n");
     let snippet = lines.slice(0, 8).join("\n");
     if (snippet.length > 500) {
@@ -4111,6 +5084,9 @@ function buildUnifiedPrompt(patches, intents, options) {
     lines.push(`   ${copy.locatorField}: ${group.locator}`);
     if (group.slideContext) {
       lines.push(`   ${copy.slideContextField}: ${group.slideContext}`);
+    }
+    if (group.targetElement) {
+      lines.push(...getComplexElementPromptNotes(group.targetElement, isZh2));
     }
     const snippet = getLocalHtmlSnippet(group.targetElement);
     if (snippet) {
@@ -5990,181 +6966,6 @@ function injectBaseStyles2() {
   document.documentElement.appendChild(style);
 }
 
-// src/content/intent-region.ts
-var ANCHOR_OVERLAP_EPSILON = 10;
-var nextRegionId = 1;
-function toDocumentRect2(viewportBox, scrollX, scrollY) {
-  const sx = scrollX ?? (typeof window !== "undefined" ? window.scrollX : 0);
-  const sy = scrollY ?? (typeof window !== "undefined" ? window.scrollY : 0);
-  return {
-    left: viewportBox.left + sx,
-    top: viewportBox.top + sy,
-    width: viewportBox.width,
-    height: viewportBox.height,
-    right: viewportBox.right + sx,
-    bottom: viewportBox.bottom + sy
-  };
-}
-function toRelativeRect(box, anchorRect) {
-  if (anchorRect.width === 0 || anchorRect.height === 0) {
-    return { ...box };
-  }
-  const leftPct = (box.left - anchorRect.left) / anchorRect.width * 100;
-  const topPct = (box.top - anchorRect.top) / anchorRect.height * 100;
-  const widthPct = box.width / anchorRect.width * 100;
-  const heightPct = box.height / anchorRect.height * 100;
-  return {
-    left: leftPct,
-    top: topPct,
-    width: widthPct,
-    height: heightPct,
-    right: leftPct + widthPct,
-    bottom: topPct + heightPct
-  };
-}
-function isVisibleAnchorCandidate(element) {
-  if (element.hasAttribute("hidden")) return false;
-  if (element.getAttribute("aria-hidden") === "true") return false;
-  const style = window.getComputedStyle(element);
-  if (style.display === "none") return false;
-  if (style.visibility === "hidden") return false;
-  if (parseFloat(style.opacity) < 0.01) return false;
-  return true;
-}
-function getAnchorPriority(element) {
-  if (element.classList.contains("active")) return 10;
-  if (element.getAttribute("aria-current") === "true") return 10;
-  if (element.getAttribute("data-active") === "true") return 10;
-  return 0;
-}
-function detectPageMode(root = document.body) {
-  if (typeof document === "undefined") return "unknown";
-  const strongSlideElements = root.querySelectorAll('[aria-roledescription="slide"], .slide, [data-slide]');
-  if (strongSlideElements.length > 0) {
-    return "slide";
-  }
-  const sections = root.querySelectorAll("section");
-  if (sections.length > 1) {
-    let slideLikeSections = 0;
-    const viewportHeight2 = window.innerHeight;
-    const viewportWidth = window.innerWidth;
-    for (let i = 0; i < sections.length; i++) {
-      const rect = sections[i].getBoundingClientRect();
-      if (rect.height >= viewportHeight2 * 0.8 && rect.width >= viewportWidth * 0.8) {
-        slideLikeSections++;
-      }
-    }
-    if (slideLikeSections > 1) {
-      return "slide";
-    }
-  }
-  const height = document.body.scrollHeight;
-  const viewportHeight = window.innerHeight;
-  if (height > viewportHeight * 1.5) {
-    return "long";
-  }
-  return "unknown";
-}
-function findRegionAnchor(box, root = document.body) {
-  const mode = detectPageMode(root);
-  if (mode === "slide") {
-    const slides = Array.from(root.querySelectorAll('[aria-roledescription="slide"], .slide, [data-slide]'));
-    let bestSlide = null;
-    let maxOverlap = 0;
-    let bestPriority = -1;
-    for (const slide of slides) {
-      if (!isVisibleAnchorCandidate(slide)) continue;
-      const rect = slide.getBoundingClientRect();
-      const { overlapArea } = calculateOverlap(rect, box);
-      const priority = getAnchorPriority(slide);
-      if (overlapArea > 0) {
-        const areaDiff = overlapArea - maxOverlap;
-        if (areaDiff > ANCHOR_OVERLAP_EPSILON) {
-          maxOverlap = overlapArea;
-          bestPriority = priority;
-          bestSlide = slide;
-        } else if (Math.abs(areaDiff) <= ANCHOR_OVERLAP_EPSILON && priority > bestPriority) {
-          maxOverlap = Math.max(maxOverlap, overlapArea);
-          bestPriority = priority;
-          bestSlide = slide;
-        }
-      }
-    }
-    if (bestSlide) {
-      const rect = bestSlide.getBoundingClientRect();
-      return {
-        kind: "slide",
-        locator: createElementLocator(bestSlide),
-        rect: {
-          left: rect.left,
-          top: rect.top,
-          width: rect.width,
-          height: rect.height,
-          right: rect.right,
-          bottom: rect.bottom
-        },
-        confidence: "high"
-      };
-    }
-  }
-  const containers = Array.from(root.querySelectorAll('section, article, main, [class*="container"], [class*="wrapper"]'));
-  let bestContainer = null;
-  let minArea = Infinity;
-  for (const container of containers) {
-    const rect = container.getBoundingClientRect();
-    const { overlapArea } = calculateOverlap(rect, box);
-    if (overlapArea > 0 && overlapArea / (box.width * box.height) > 0.8) {
-      const area = rect.width * rect.height;
-      if (area > 0 && area < minArea) {
-        minArea = area;
-        bestContainer = container;
-      }
-    }
-  }
-  if (bestContainer) {
-    const rect = bestContainer.getBoundingClientRect();
-    return {
-      kind: bestContainer.tagName.toLowerCase() === "section" ? "section" : "container",
-      locator: createElementLocator(bestContainer),
-      rect: {
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height,
-        right: rect.right,
-        bottom: rect.bottom
-      },
-      confidence: "medium"
-    };
-  }
-  return {
-    kind: "document",
-    confidence: "low"
-  };
-}
-function createIntentRegion(options) {
-  const root = options.root ?? document.body;
-  const pageMode = detectPageMode(root);
-  const documentBox = toDocumentRect2(options.viewportBox);
-  const anchor = findRegionAnchor(options.viewportBox, root);
-  let relativeBox;
-  if (anchor.rect) {
-    relativeBox = toRelativeRect(options.viewportBox, anchor.rect);
-  }
-  return {
-    id: `ir-${nextRegionId++}`,
-    action: options.action,
-    userIntent: options.userIntent,
-    pageMode,
-    viewportBox: options.viewportBox,
-    documentBox,
-    relativeBox,
-    anchor,
-    createdAt: Date.now(),
-    isGhostPreview: options.isGhostPreview
-  };
-}
-
 // src/content/intent-draft-state.ts
 function pickNextIntentColor(usedColors, palette) {
   if (palette.length === 0) {
@@ -6206,6 +7007,7 @@ function buildIntentDraftVisualPlan(drafts, removeBadgeLabel) {
 // src/content/intent-ghost.ts
 var STYLE_ID3 = "clickdeck-ghost-preview-style";
 var GUIDE_ORTHOGONAL_MAX = 240;
+var SNAP_THRESHOLD_PX = 8;
 function getTargetGuidePositions(rect) {
   const centerX = rect.left + rect.width / 2;
   const centerY = rect.top + rect.height / 2;
@@ -6231,7 +7033,7 @@ function isGuideLocallyRelevant(rect, candidate) {
   const distanceX = rangeDistance(rect.left, rect.right, candidate.sourceRect.left, candidate.sourceRect.right);
   return distanceX <= Math.max(GUIDE_ORTHOGONAL_MAX, rect.width);
 }
-function computeActiveGuides(rect, guideCandidates, threshold = 8) {
+function computeActiveGuides(rect, guideCandidates, threshold = SNAP_THRESHOLD_PX) {
   const targetPositions = getTargetGuidePositions(rect);
   const bestByAxis = /* @__PURE__ */ new Map();
   for (const target of targetPositions) {
@@ -6248,12 +7050,66 @@ function computeActiveGuides(rect, guideCandidates, threshold = 8) {
           targetEdge: target.targetEdge,
           sourceEdge: candidate.sourceEdge,
           unitSummary: candidate.unitSummary,
-          deltaPx
+          deltaPx,
+          confidence: "high"
         });
       }
     }
   }
   return Array.from(bestByAxis.values()).sort((a, b) => a.axis.localeCompare(b.axis));
+}
+function getEdgePosition(rect, edge) {
+  if (edge === "left") return rect.left;
+  if (edge === "right") return rect.right;
+  if (edge === "top") return rect.top;
+  if (edge === "bottom") return rect.bottom;
+  if (edge === "centerX") return rect.left + rect.width / 2;
+  return rect.top + rect.height / 2;
+}
+function offsetRect(rect, dx, dy) {
+  return {
+    left: rect.left + dx,
+    top: rect.top + dy,
+    width: rect.width,
+    height: rect.height,
+    right: rect.right + dx,
+    bottom: rect.bottom + dy
+  };
+}
+function snapRectToGuides(rect, guideCandidates, threshold = SNAP_THRESHOLD_PX) {
+  const guides = computeActiveGuides(rect, guideCandidates, threshold);
+  let dx = 0;
+  let dy = 0;
+  const xGuide = guides.find((guide) => guide.axis === "x");
+  if (xGuide) {
+    dx = xGuide.position - getEdgePosition(rect, xGuide.targetEdge);
+  }
+  const yGuide = guides.find((guide) => guide.axis === "y");
+  if (yGuide) {
+    dy = yGuide.position - getEdgePosition(rect, yGuide.targetEdge);
+  }
+  if (dx === 0 && dy === 0) {
+    return { rect, guides, dx, dy };
+  }
+  const snappedRect = offsetRect(rect, dx, dy);
+  const snappedGuides = computeActiveGuides(snappedRect, guideCandidates, threshold).map((guide) => ({
+    ...guide,
+    deltaPx: 0
+  }));
+  return { rect: snappedRect, guides: snappedGuides, dx, dy };
+}
+function formatGuideHint(guides) {
+  if (guides.length === 0) return null;
+  const xGuide = guides.find((guide) => guide.axis === "x");
+  const yGuide = guides.find((guide) => guide.axis === "y");
+  const parts = [];
+  if (xGuide) {
+    parts.push(`X: ${xGuide.targetEdge} -> ${xGuide.unitSummary}`);
+  }
+  if (yGuide) {
+    parts.push(`Y: ${yGuide.targetEdge} -> ${yGuide.unitSummary}`);
+  }
+  return parts.join(" | ");
 }
 function createMoveTargetBox(options) {
   injectBaseStyles3();
@@ -6323,6 +7179,10 @@ function createMoveTargetBox(options) {
   let currentTy = 0;
   let tempDx = 0;
   let tempDy = 0;
+  let previewTx = 0;
+  let previewTy = 0;
+  let lastPreviewRect = { left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0 };
+  let lastPreviewGuides = [];
   function onMouseDown(e) {
     if (e.target.closest(".clickdeck-ghost-preview__close")) return;
     isDragging = true;
@@ -6335,28 +7195,50 @@ function createMoveTargetBox(options) {
     if (!isDragging) return;
     tempDx = e.clientX - startX;
     tempDy = e.clientY - startY;
-    element.style.transform = `translate(${currentTx + tempDx}px, ${currentTy + tempDy}px)`;
+    const baseRect = {
+      left: lastPreviewRect.left - previewTx,
+      top: lastPreviewRect.top - previewTy,
+      width: lastPreviewRect.width,
+      height: lastPreviewRect.height,
+      right: lastPreviewRect.right - previewTx,
+      bottom: lastPreviewRect.bottom - previewTy
+    };
+    const rawRect = offsetRect(baseRect, currentTx + tempDx, currentTy + tempDy);
+    const snapped = snapRectToGuides(rawRect, options.guideCandidates);
+    previewTx = currentTx + tempDx + snapped.dx;
+    previewTy = currentTy + tempDy + snapped.dy;
+    lastPreviewRect = snapped.rect;
+    lastPreviewGuides = snapped.guides;
+    element.style.transform = `translate(${previewTx}px, ${previewTy}px)`;
     clearGuideLines();
-    const currentRect = element.getBoundingClientRect();
-    const activeGuides = computeActiveGuides(currentRect, options.guideCandidates);
-    activeGuides.forEach((guide) => drawGuideLine(guide.axis === "x", guide.position));
+    lastPreviewGuides.forEach((guide) => drawGuideLine(guide.axis === "x", guide.position));
+    uiContainer.textContent = formatGuideHint(lastPreviewGuides) ?? labels.intentDragToPlace;
   }
   function onMouseUp() {
     if (!isDragging) return;
     isDragging = false;
-    currentTx += tempDx;
-    currentTy += tempDy;
+    currentTx = previewTx;
+    currentTy = previewTy;
     tempDx = 0;
     tempDy = 0;
     element.classList.remove("clickdeck-ghost-preview--dragging");
     clearGuideLines();
-    const finalRect = element.getBoundingClientRect();
-    options.onChange(finalRect, computeActiveGuides(finalRect, options.guideCandidates));
+    uiContainer.textContent = formatGuideHint(lastPreviewGuides) ?? labels.intentDragToPlace;
+    options.onChange(lastPreviewRect, lastPreviewGuides);
   }
   element.addEventListener("mousedown", onMouseDown);
   document.addEventListener("mousemove", onMouseMove);
   document.addEventListener("mouseup", onMouseUp);
   (options.anchorElement ?? document.body).appendChild(element);
+  const initialRect = element.getBoundingClientRect();
+  lastPreviewRect = {
+    left: initialRect.left,
+    top: initialRect.top,
+    width: initialRect.width,
+    height: initialRect.height,
+    right: initialRect.right,
+    bottom: initialRect.bottom
+  };
   return {
     element,
     destroy: () => {
@@ -6496,6 +7378,7 @@ function createController(logger, rootId2) {
   let presentationController = null;
   let editingElement = null;
   let originalText = "";
+  let svgInlineEditor = null;
   let visibilityCheckInterval = null;
   function buildIntentDraftPanel() {
     const p = createIntentDraftPanel(
@@ -6671,9 +7554,35 @@ function createController(logger, rootId2) {
   const textTags = /* @__PURE__ */ new Set(["h1", "h2", "h3", "h4", "h5", "h6", "p", "span", "a", "li", "strong", "em"]);
   const containerTags = /* @__PURE__ */ new Set(["div", "section", "article", "main", "header", "footer", "nav", "aside"]);
   const intentColors = ["#e85d75", "#16a085", "#d97706", "#2563eb", "#8b5cf6", "#0f766e"];
+  function refreshSvgTextEditorState(target) {
+    if (!(target instanceof SVGSVGElement)) {
+      panel?.setSvgTextEditorState(null);
+      return;
+    }
+    const svgTextState = getSvgTextEditState(target);
+    if (!svgTextState) {
+      panel?.setSvgTextEditorState(null);
+      return;
+    }
+    if (svgTextState.mode === "editable") {
+      panel?.setSvgTextEditorState({
+        mode: "editable",
+        message: labels.svgTextEditableHint
+      });
+      return;
+    }
+    panel?.setSvgTextEditorState({
+      mode: svgTextState.mode,
+      message: svgTextState.mode === "complex" ? labels.svgTextComplex : labels.svgTextNoneEditable
+    });
+  }
   function getSelectionContext(target) {
     if (!target) {
       return "none";
+    }
+    const complexKind = getComplexElementKind(target);
+    if (complexKind) {
+      return complexKind;
     }
     const tag = target.tagName.toLowerCase();
     if (tag === "img") {
@@ -6682,7 +7591,7 @@ function createController(logger, rootId2) {
     if (tag === "video") {
       return "video";
     }
-    if (textTags.has(tag) || canAutoStartTextEditing(target)) {
+    if (textTags.has(tag) || target instanceof HTMLElement && canAutoStartTextEditing(target)) {
       return "text";
     }
     if (containerTags.has(tag)) {
@@ -6928,6 +7837,34 @@ function createController(logger, rootId2) {
     });
   }
   function stopEditing() {
+    if (svgInlineEditor) {
+      const { container, highlight, target, ownerSvg, originalText: originalText2 } = svgInlineEditor;
+      const newText2 = target.textContent ?? "";
+      container.remove();
+      highlight.remove();
+      if (newText2 !== originalText2) {
+        const locator = createElementLocator(target);
+        const patch = {
+          id: `${Date.now()}-${state.patches.length + 1}`,
+          kind: "content",
+          targetElement: target,
+          targetDescriptor: describeElement(target),
+          targetLocator: locator,
+          before: originalText2,
+          after: newText2,
+          createdAt: Date.now()
+        };
+        recordContentPatch(state, patch);
+        history.undoStack.push(patch);
+        history.redoStack.length = 0;
+        logger.info("Inline SVG text editing completed", { target: patch.targetDescriptor });
+        refreshHistoryButtons();
+        persistPatches();
+      }
+      svgInlineEditor = null;
+      refreshSvgTextEditorState(ownerSvg);
+      return;
+    }
     if (!editingElement) {
       return;
     }
@@ -7000,6 +7937,27 @@ function createController(logger, rootId2) {
     return collected.reverse();
   }
   function pushPatchGroup(stack, patches) {
+    if (patches.length === 0) {
+      return;
+    }
+    const last = patches[patches.length - 1];
+    const groupBatchId = last.batchId;
+    const groupTarget = last.targetDescriptor;
+    const collected = [last];
+    while (stack.length > 0) {
+      const previous = stack[stack.length - 1];
+      if (groupBatchId) {
+        if (!previous || previous.batchId !== groupBatchId) {
+          break;
+        }
+        collected.push(stack.pop());
+        continue;
+      }
+      break;
+    }
+    for (let i = collected.length - 1; i >= 1; i--) {
+      stack.push(collected[i]);
+    }
     for (const patch of patches) {
       stack.push(patch);
     }
@@ -7083,11 +8041,15 @@ function createController(logger, rootId2) {
       return;
     }
     const rawTarget = event.target;
+    const editableSvgTextTarget = getEditableSvgTextTarget(rawTarget);
+    if (svgInlineEditor && svgInlineEditor.container.contains(rawTarget)) {
+      return;
+    }
     const hadSelectionContext = Boolean(selectedElement || editingElement);
     if (editingElement && editingElement.contains(rawTarget)) {
       return;
     }
-    if (selectedElement && rawTarget === selectedElement && isLargeContainer(selectedElement)) {
+    if (selectedElement instanceof HTMLElement && rawTarget === selectedElement && isLargeContainer(selectedElement)) {
       event.preventDefault();
       event.stopPropagation();
       clearSelection("double-click large container");
@@ -7123,7 +8085,14 @@ function createController(logger, rootId2) {
     const mediaType = tag === "img" ? "image" : tag === "video" ? "video" : "none";
     panel?.setReplaceMediaAvailability(mediaType !== "none", mediaType);
     panel?.setSelectionContext(getSelectionContext(target));
-    if (canAutoStartTextEditing(target)) {
+    refreshSvgTextEditorState(target);
+    if (editableSvgTextTarget) {
+      openInlineSvgTextEditor(editableSvgTextTarget);
+      updateOutline2();
+      logger.info("Inline SVG text editing started", { target: describeElement(editableSvgTextTarget) });
+      return;
+    }
+    if (target instanceof HTMLElement && canAutoStartTextEditing(target)) {
       editingElement = target;
       originalText = target.textContent ?? "";
       target.setAttribute("contenteditable", "true");
@@ -7143,6 +8112,7 @@ function createController(logger, rootId2) {
     panel?.setHint(labels.selectHint);
     panel?.setReplaceMediaAvailability(false, "none");
     panel?.setSelectionContext("none");
+    panel?.setSvgTextEditorState(null);
     updateOutline2();
     logger.info("Selection cleared", { reason });
   }
@@ -7156,6 +8126,7 @@ function createController(logger, rootId2) {
     const mediaType = tag === "img" ? "image" : tag === "video" ? "video" : "none";
     panel?.setReplaceMediaAvailability(mediaType !== "none", mediaType);
     panel?.setSelectionContext(getSelectionContext(target));
+    refreshSvgTextEditorState(target);
     updateOutline2();
     logger.info("Element selected", { descriptor, reason });
   }
@@ -7184,6 +8155,9 @@ function createController(logger, rootId2) {
       }
       event.preventDefault();
       event.stopPropagation();
+      if (!(selectedElement instanceof HTMLElement)) {
+        return;
+      }
       const direction = event.shiftKey ? "backward" : "forward";
       const next = getTabSwitchTarget(selectedElement, direction);
       if (!next || next === selectedElement) {
@@ -7193,16 +8167,16 @@ function createController(logger, rootId2) {
     }
   }
   function handleStyleAction(action) {
-    if (!selectedElement) {
+    if (!selectedElement || !("style" in selectedElement)) {
       return;
     }
-    const changes = applyStyleAction(logger, selectedElement, action);
+    const targetElement = selectedElement;
+    const changes = applyStyleAction(logger, targetElement, action);
     if (!changes || changes.length === 0) {
       return;
     }
     const createdAt = Date.now();
     const baseId = `${createdAt}-${state.patches.length + 1}`;
-    const targetElement = selectedElement;
     const targetDescriptor = describeElement(targetElement);
     const targetLocator = createElementLocator(targetElement);
     const patches = changes.map((change, index) => {
@@ -7231,8 +8205,207 @@ function createController(logger, rootId2) {
     refreshHistoryButtons();
     persistPatches();
   }
+  function applySvgTextEdits(targetSvg, updates) {
+    const svgTextState = getSvgTextEditState(targetSvg);
+    if (!svgTextState || svgTextState.mode !== "editable") {
+      return;
+    }
+    const itemMap = new Map(svgTextState.items.map((item) => [item.id, item]));
+    const patchTargets = updates.map((update) => {
+      const item = itemMap.get(update.id);
+      if (!item) {
+        return null;
+      }
+      const nextValue = update.value;
+      const before = item.target.textContent ?? "";
+      if (before === nextValue) {
+        return null;
+      }
+      item.target.textContent = nextValue;
+      const patch = {
+        id: "",
+        kind: "content",
+        targetElement: item.target,
+        targetDescriptor: describeElement(item.target),
+        targetLocator: createElementLocator(item.target),
+        before,
+        after: nextValue,
+        createdAt: 0
+      };
+      return patch;
+    }).filter((patch) => Boolean(patch));
+    if (patchTargets.length === 0) {
+      return;
+    }
+    const createdAt = Date.now();
+    const batchId = `svg-text-${createdAt}-${state.patches.length + 1}`;
+    const baseId = `${createdAt}-${state.patches.length + 1}`;
+    const patches = patchTargets.map((patch, index) => ({
+      ...patch,
+      id: `${baseId}-${index + 1}`,
+      batchId,
+      createdAt
+    }));
+    for (const patch of patches) {
+      recordContentPatch(state, patch);
+    }
+    pushPatchGroup(history.undoStack, patches);
+    history.redoStack.length = 0;
+    refreshHistoryButtons();
+    persistPatches();
+    refreshSvgTextEditorState(targetSvg);
+    logger.info("SVG text edits applied", {
+      patchIds: patches.map((patch) => patch.id),
+      target: describeElement(targetSvg)
+    });
+  }
+  function openInlineSvgTextEditor(target) {
+    stopEditing();
+    const ownerSvg = target.closest("svg");
+    if (!(ownerSvg instanceof SVGSVGElement)) {
+      return;
+    }
+    const rect = target.getBoundingClientRect();
+    const style = window.getComputedStyle(target);
+    const overlayRoot = overlay?.root ?? document.body;
+    const highlight = document.createElement("div");
+    highlight.className = "clickdeck-svg-inline-highlight";
+    highlight.dataset.clickdeck = "true";
+    Object.assign(highlight.style, {
+      position: "fixed",
+      left: `${rect.left - 4}px`,
+      top: `${rect.top - 4}px`,
+      width: `${rect.width + 8}px`,
+      height: `${rect.height + 8}px`,
+      zIndex: "2147483646"
+    });
+    const container = document.createElement("div");
+    container.className = "clickdeck-svg-inline-popover";
+    container.dataset.clickdeck = "true";
+    container.tabIndex = -1;
+    const title = document.createElement("div");
+    title.className = "clickdeck-svg-inline-popover__title";
+    title.textContent = labels.svgTextEditorTitle;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = target.textContent ?? "";
+    input.className = "clickdeck-svg-inline-popover__input";
+    input.dataset.clickdeck = "true";
+    Object.assign(input.style, {
+      fontSize: style.fontSize,
+      fontFamily: style.fontFamily,
+      fontWeight: style.fontWeight,
+      letterSpacing: style.letterSpacing,
+      lineHeight: style.lineHeight,
+      color: style.fill && style.fill !== "none" ? style.fill : style.color
+    });
+    const actions = document.createElement("div");
+    actions.className = "clickdeck-svg-inline-popover__actions";
+    const applyButton = document.createElement("button");
+    applyButton.type = "button";
+    applyButton.className = "clickdeck-svg-inline-popover__button clickdeck-svg-inline-popover__button--primary";
+    applyButton.dataset.clickdeck = "true";
+    applyButton.textContent = labels.svgTextApply;
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.className = "clickdeck-svg-inline-popover__button";
+    cancelButton.dataset.clickdeck = "true";
+    cancelButton.textContent = labels.svgTextCancel;
+    actions.append(applyButton, cancelButton);
+    container.append(title, input, actions);
+    overlayRoot.append(highlight, container);
+    positionSvgInlinePopover(container, rect);
+    const commitAndRemove = () => {
+      stopEditing();
+    };
+    const cancelAndRemove = () => {
+      if (!svgInlineEditor) {
+        return;
+      }
+      const { container: container2, highlight: highlight2, target: target2, ownerSvg: ownerSvg2, originalText: originalText2 } = svgInlineEditor;
+      target2.textContent = originalText2;
+      container2.remove();
+      highlight2.remove();
+      svgInlineEditor = null;
+      refreshSvgTextEditorState(ownerSvg2);
+    };
+    input.addEventListener("input", () => {
+      target.textContent = input.value;
+    });
+    input.addEventListener("keydown", (evt) => {
+      if (evt.key === "Enter") {
+        evt.preventDefault();
+        evt.stopPropagation();
+        commitAndRemove();
+        return;
+      }
+      if (evt.key === "Escape") {
+        evt.preventDefault();
+        evt.stopPropagation();
+        cancelAndRemove();
+      }
+    });
+    applyButton.addEventListener("click", (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      commitAndRemove();
+    });
+    cancelButton.addEventListener("click", (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      cancelAndRemove();
+    });
+    svgInlineEditor = {
+      container,
+      input,
+      highlight,
+      target,
+      ownerSvg,
+      originalText: target.textContent ?? ""
+    };
+    input.focus();
+    input.select();
+  }
+  function positionSvgInlinePopover(container, rect) {
+    const margin = 12;
+    const gap = 10;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const popoverRect = container.getBoundingClientRect();
+    let left = rect.left;
+    if (left + popoverRect.width > viewportWidth - margin) {
+      left = Math.max(margin, rect.right - popoverRect.width);
+    }
+    let top = rect.bottom + gap;
+    if (top + popoverRect.height > viewportHeight - margin) {
+      top = Math.max(margin, rect.top - popoverRect.height - gap);
+    }
+    container.style.left = `${left}px`;
+    container.style.top = `${top}px`;
+  }
   function handlePanelAction(action) {
     stopEditing();
+    if (action === "edit-svg-text") {
+      if (!(selectedElement instanceof SVGSVGElement)) {
+        return;
+      }
+      const targetSvg = selectedElement;
+      const svgTextState = getSvgTextEditState(targetSvg);
+      if (!svgTextState || svgTextState.mode !== "editable") {
+        refreshSvgTextEditorState(targetSvg);
+        return;
+      }
+      panel?.showSvgTextEditor({
+        items: svgTextState.items.map((item, index) => ({
+          id: item.id,
+          label: `${labels.svgTextItemPrefix} ${index + 1}`,
+          value: item.value
+        })),
+        warning: labels.svgTextWarning,
+        onApply: (updates) => applySvgTextEdits(targetSvg, updates)
+      });
+      return;
+    }
     if (action === "close") {
       deactivate();
       return;
@@ -7515,6 +8688,9 @@ function createController(logger, rootId2) {
     }
     if (typeof action === "string" && action.startsWith("color:")) {
       if (!selectedElement) {
+        return;
+      }
+      if (!(selectedElement instanceof HTMLElement)) {
         return;
       }
       const colorValue = action.slice(6);

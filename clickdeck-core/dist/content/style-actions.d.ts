@@ -6,4 +6,6 @@ export type AppliedStyleChange = {
     before: string;
     after: string;
 };
-export declare function applyStyleAction(logger: ClickDeckLogger, element: HTMLElement, action: StyleAction): AppliedStyleChange[] | null;
+export declare function applyStyleAction(logger: ClickDeckLogger, element: Element & {
+    style: CSSStyleDeclaration;
+}, action: StyleAction): AppliedStyleChange[] | null;

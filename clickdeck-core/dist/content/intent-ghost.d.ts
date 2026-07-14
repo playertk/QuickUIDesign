@@ -15,4 +15,10 @@ export type MoveTargetBoxOptions = {
     onCancel: () => void;
 };
 export declare function computeActiveGuides(rect: RectLike, guideCandidates: GuideCandidate[], threshold?: number): ActiveAlignmentGuide[];
+export declare function snapRectToGuides(rect: RectLike, guideCandidates: GuideCandidate[], threshold?: number): {
+    rect: RectLike;
+    guides: ActiveAlignmentGuide[];
+    dx: number;
+    dy: number;
+};
 export declare function createMoveTargetBox(options: MoveTargetBoxOptions): MoveTargetBox;

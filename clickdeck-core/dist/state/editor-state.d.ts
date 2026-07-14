@@ -20,13 +20,14 @@ export type ElementLocator = {
     selectorStabilityReason?: string;
 };
 export type SelectedElementState = {
-    element: HTMLElement;
+    element: Element;
     descriptor: string;
 };
 export type StylePatch = {
     id: string;
     kind: "style";
-    targetElement: HTMLElement;
+    batchId?: string;
+    targetElement: Element;
     targetDescriptor: string;
     targetLocator?: ElementLocator;
     property: StyleProperty;
@@ -37,7 +38,8 @@ export type StylePatch = {
 export type ContentPatch = {
     id: string;
     kind: "content";
-    targetElement: HTMLElement;
+    batchId?: string;
+    targetElement: Element;
     targetDescriptor: string;
     targetLocator?: ElementLocator;
     before: string;
@@ -47,7 +49,8 @@ export type ContentPatch = {
 export type AttributePatch = {
     id: string;
     kind: "attribute";
-    targetElement: HTMLElement;
+    batchId?: string;
+    targetElement: Element;
     targetDescriptor: string;
     targetLocator?: ElementLocator;
     attribute: "src";
@@ -186,7 +189,7 @@ export declare function recordStylePatch(state: EditorState, patch: StylePatch):
 export declare function recordContentPatch(state: EditorState, patch: ContentPatch): void;
 export declare function buildStorageKey(href: string): string;
 export declare function serializePatches(patches: EditorPatch[]): PersistedPatch[];
-export declare function findElementByLocator(locator: ElementLocator): HTMLElement | null;
+export declare function findElementByLocator(locator: ElementLocator): Element | null;
 export declare function hydratePersistedPatches(persisted: PersistedPatch[], logger?: {
     warn: (message: string, details?: unknown) => void;
 }): EditorPatch[];

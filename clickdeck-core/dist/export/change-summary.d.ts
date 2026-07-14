@@ -20,7 +20,7 @@ export type PromptBuildOptions = {
 export type PromptChangeGroup = {
     key: string;
     target: string;
-    targetElement?: HTMLElement;
+    targetElement?: Element;
     locator: string;
     slideContext?: string;
     styleChanges: Map<string, {

@@ -29,6 +29,11 @@ export type IntentOperation = {
     target?: IntentRegion;
     createdAt: number;
 };
+export type AnchorRelation = {
+    shared: boolean;
+    differentSection: boolean;
+    confidence: "high" | "medium" | "low";
+};
 export declare function normalizeRect(input: Partial<RectLike>): RectLike;
 export declare function toDocumentRect(viewportBox: RectLike, scrollX?: number, scrollY?: number): RectLike;
 export declare function toRelativeRect(box: RectLike, anchorRect: RectLike): RectLike;
@@ -44,3 +49,4 @@ export declare function createIntentRegion(options: {
     isGhostPreview?: boolean;
 }): IntentRegion;
 export declare function createIntentOperation(source: IntentRegion, target?: IntentRegion): IntentOperation;
+export declare function compareRegionAnchors(source: IntentRegion, target: IntentRegion): AnchorRelation;
