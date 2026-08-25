@@ -4,7 +4,7 @@ English | [中文](#quickui-design-中文)
 
 **QuickUI-Design** is a **Unreal Engine 5 (UE5)** UI design toolkit that leverages **React** to build interactive interfaces for UE5.
 
-> Online Documentation: [https://uecopilot.pixelbear.xyz/](https://uecopilot.pixelbear.xyz/)
+> Online Documentation: [https://quickui.pixelbear.xyz](https://quickui.pixelbear.xyz)
 
 ## Features
 
@@ -165,7 +165,7 @@ This project includes both open-source and proprietary components. See the [LICE
 
 - **Author**: MarcoTin
 - **Email**: 277924771@qq.com
-- **Homepage**: [https://quickui.pixelbear.xyz](https://quickui.pixelbear.xyz)
+- **Homepage**:[https://quickui.pixelbear.xyz](https://quickui.pixelbear.xyz/zh/index.html)
 
 
 ---
