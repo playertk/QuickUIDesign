@@ -165,7 +165,7 @@ This project includes both open-source and proprietary components. See the [LICE
 
 - **Author**: MarcoTin
 - **Email**: 277924771@qq.com
-- **Homepage**:[https://quickui.pixelbear.xyz](https://quickui.pixelbear.xyz/zh/index.html)
+- **Homepage**:[https://quickui.pixelbear.xyz](https://quickui.pixelbear.xyz)
 
 
 ---
@@ -174,7 +174,7 @@ This project includes both open-source and proprietary components. See the [LICE
 
 **QuickUI-Design** 是一个 **Unreal Engine 5 (UE5)** UI 设计工具包，利用 **React** 为 UE5 构建交互式界面。
 
-> 在线文档：[https://uecopilot.pixelbear.xyz/](https://uecopilot.pixelbear.xyz/)
+> 在线文档：[https://quickui.pixelbear.xyz](https://quickui.pixelbear.xyz/zh/index.html)
 
 ## 特性
 
@@ -333,4 +333,4 @@ QuickUIDesign/
 
 - **作者**：MarcoTin
 - **邮箱**：277924771@qq.com
-- **主页**：[https://quickui.pixelbear.xyz](https://quickui.pixelbear.xyz)
+- **主页**：[https://quickui.pixelbear.xyz](https://quickui.pixelbear.xyz/zh/index.html)
