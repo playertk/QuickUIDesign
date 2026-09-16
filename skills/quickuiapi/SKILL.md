@@ -1,6 +1,6 @@
 ---
-name: "\"QuickUIAPI\""
-description: "\"UE5-React connector for QuickUI Plugins. Invoke when developing UE5 web UI using QuickUIAPI keyword, using ue-connect hooks, or implementing UE5-Web communication.\""
+name: "QuickUIAPI"
+description: "UE5-React connector for QuickUI Plugins. Invoke when developing or optimizing UE5 web UI with ue-connect (QuickUIAPI keyword), implementing UE5-Web communication, or fixing Web UI FPS/jank."
 ---
 
 # QuickuiAPI Skill
@@ -19,6 +19,7 @@ Invoke this skill when:
 - Using any `ue-connect` hooks or components
 - Troubleshooting UE5-React integration issues
 - Setting up `QuickUIDesign` projects with UE5
+- Writing, reviewing or optimizing any QuickUI component where FPS / jank matters (drag & drop, animations, per-frame updates, HUD overlays, blurred panels, long item lists)
 
 ## Install
   - Copy the `ue-connect` library files into your project
@@ -39,12 +40,28 @@ Read individual rule files for detailed explanations and code examples:
 - [rules/input-management.md](rules/input-management.md) - Input Management, Global input event interceptor (right-click & Tab key).
 - [rules/raw-data-channel.md](rules/raw-data-channel.md) - Low-level API (useUEEventJSON/useUECallback/filterUECallBackJSonData) used to directly send JSON data to UE5.
 - [rules/device-adaptation.md](rules/device-adaptation.md) - Device Adaptation via useDPR hook, provides ratio/toPhysical/toLogical utilities.
+- [rules/render-performance.md](rules/render-performance.md) - Render Performance (React + Paint), FPS rules for high-frequency events, memo, drag & drop, and expensive CSS in CEF.
+
+## Performance is a mandatory default (not an optional pass)
+
+The UI runs inside the UE5 WebView, which shares the frame budget with the game. Before writing or modifying **any** component, read [rules/render-performance.md](rules/render-performance.md) and apply it as part of the implementation — not as a later optimization step.
+
+Minimum bar for every component you produce:
+- No `setState` inside pointer/mouse/scroll/resize handlers → use `ref` + one DOM write per frame via `requestAnimationFrame` (write `transform`, never re-declare it in JSX).
+- Only update state when the value actually changed (dedupe against a ref).
+- `memo` children get reference-stable props (`useCallback` / `useMemo`) and state is updated immutably.
+- No `backdrop-filter`, no `filter: drop-shadow`, no `transition-all`, no infinite keyframe animations, no repeated multi-layer shadows in per-item nodes.
+- Animate only `transform` / `opacity`; use Pointer Events (not native `draggable`) for drag & drop.
+- When a QuickUI change touches interactivity or animation, briefly state which of these rules were applied (and which were intentionally skipped) in your summary.
 
 
 ## Best Practices
-1. **Performance Optimization**
+1. **Performance Optimization** — see [rules/render-performance.md](rules/render-performance.md) for the full rule set
   - Use `data-nohit` attribute appropriately to avoid unnecessary mouse event processing
   - Disable mouse events when not needed to reduce performance overhead
+  - Keep high-frequency events (pointer/mouse/wheel/scroll) out of React state; write DOM directly in a `requestAnimationFrame`
+  - Keep `memo` children working: stable callbacks, memoized derived data, immutable state updates
+  - Restrict CSS to compositor-friendly properties (`transform` / `opacity`); avoid `backdrop-filter`, `filter`, `transition-all`, infinite animations and stacked shadows
 
 2. **Error Handling**
   - Always check `isConnected` status before sending events
